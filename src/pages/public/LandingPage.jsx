@@ -9,21 +9,17 @@ import {
   CheckCircle2,
   Lock,
   ArrowRight,
-  Calculator,
   ChevronRight,
   Award,
   Users,
-  Building2,
   PhoneCall,
   Mail,
   MapPin,
   Send,
   Zap,
-  Percent,
   FileText,
   FileSpreadsheet
 } from 'lucide-react';
-import Navbar from '../../components/common/Navbar';
 import Footer from '../../components/common/Footer';
 import { calculateEMI, calculateFDReturns } from '../../utils/calculators';
 import { formatINR } from '../../utils/formatters';
@@ -157,9 +153,7 @@ const LandingPage = ({ onNavigate }) => {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50">
-      <Navbar onNavigate={onNavigate} currentPage="home" />
-
+    <div className="flex-1 flex flex-col bg-slate-50">
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-gradient-to-b from-white via-slate-50 to-slate-100 pt-12 pb-20 lg:pt-20 lg:pb-28 border-b border-slate-200">
         {/* Blurred Banner Background Layer */}

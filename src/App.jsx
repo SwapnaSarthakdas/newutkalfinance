@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { FinanceProvider, useFinance } from './context/FinanceContext';
 import Toast from './components/common/Toast';
+import Navbar from './components/common/Navbar';
 import LandingPage from './pages/public/LandingPage';
 import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
@@ -15,17 +16,21 @@ const AppController = () => {
   const { user, role, isAuthenticated, isLoading } = useAuth();
   const { addToast } = useFinance();
 
+  const getNormalizedRoute = () => {
+    const raw = (window.location.hash || '').replace(/^#\/?/, '').trim();
+    if (raw) return raw;
+    const path = (window.location.pathname || '').replace(/^\/+/, '').trim();
+    if (path && path !== 'index.html') return path;
+    return 'home';
+  };
+
   // Route state
-  const [currentRoute, setCurrentRoute] = useState(() => {
-    const hash = window.location.hash.replace('#', '');
-    return hash || 'home';
-  });
+  const [currentRoute, setCurrentRoute] = useState(getNormalizedRoute);
 
   // Sync route with window hash
   useEffect(() => {
     const handleHashChange = () => {
-      const hash = window.location.hash.replace('#', '');
-      if (hash) setCurrentRoute(hash);
+      setCurrentRoute(getNormalizedRoute());
     };
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
@@ -115,6 +120,8 @@ const AppController = () => {
   const renderCurrentView = () => {
     switch (currentRoute) {
       case 'login':
+      case 'admin-login':
+      case 'admin':
         return <LoginPage onNavigate={navigate} />;
       case 'register':
         return <RegisterPage onNavigate={navigate} />;
@@ -162,9 +169,24 @@ const AppController = () => {
     }
   };
 
+  // Determine if constant navbar should be displayed (homepage, login, and home-section routes)
+  const isLoginRoute = ['login', 'admin-login', 'admin'].includes(currentRoute);
+  const isPublicNavRoute =
+    ['home', 'login', 'admin-login', 'admin', 'about', 'services', 'why-us', 'calculator', 'contact'].includes(currentRoute) ||
+    !currentRoute ||
+    (!isAuthenticated && !user && ['admin-dashboard', 'member-dashboard'].includes(currentRoute));
+
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 selection:bg-finance-600 selection:text-white">
-      {renderCurrentView()}
+    <div className="min-h-screen bg-slate-50 text-slate-900 selection:bg-finance-600 selection:text-white flex flex-col">
+      {isPublicNavRoute && (
+        <>
+          <Navbar onNavigate={navigate} currentPage={isLoginRoute ? 'login' : 'home'} />
+          <div className="h-[101px] sm:h-[133px] md:h-[137px] w-full flex-shrink-0 pointer-events-none" aria-hidden="true" />
+        </>
+      )}
+      <main className="flex-1 flex flex-col">
+        {renderCurrentView()}
+      </main>
       <Toast />
     </div>
   );

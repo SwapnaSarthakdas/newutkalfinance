@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, Lock, Shield, ArrowRight, ArrowLeft, AlertCircle, CheckCircle2, KeyRound } from 'lucide-react';
+import { Eye, EyeOff, Lock, Shield, ArrowRight, AlertCircle, CheckCircle2, KeyRound } from 'lucide-react';
 import Logo from '../../components/common/Logo';
 import Modal from '../../components/common/Modal';
 import { useAuth } from '../../context/AuthContext';
@@ -68,29 +68,9 @@ const LoginPage = ({ onNavigate }) => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col justify-between">
-      {/* Top Bar */}
-      <div className="bg-white border-b border-slate-200 px-4 sm:px-8 py-3.5">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="cursor-pointer flex items-center gap-4" onClick={() => onNavigate('home')}>
-            <Logo size="md" />
-            <img
-              src="/banner.jpg"
-              alt="Govt. of India Certified"
-              className="hidden md:block h-8 w-auto object-contain rounded border border-amber-300/40 shadow-xs"
-            />
-          </div>
-          <button
-            onClick={() => onNavigate('home')}
-            className="text-xs font-semibold text-slate-600 hover:text-slate-900 flex items-center gap-1.5 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" /> Back to Website
-          </button>
-        </div>
-      </div>
-
+    <div className="flex-1 flex flex-col justify-between bg-slate-50">
       {/* Main Login Card Container */}
-      <div className="flex-1 flex items-center justify-center p-4 sm:p-6 my-6">
+      <div className="flex-1 flex items-center justify-center p-4 sm:p-6 py-6 sm:py-8">
         <div className="w-full max-w-md bg-white rounded-3xl shadow-xl border border-slate-200/80 overflow-hidden">
           {/* Header */}
           <div className="p-6 sm:p-8 pb-4">
@@ -101,10 +81,6 @@ const LoginPage = ({ onNavigate }) => {
                 title="Return to Utkal Finance Home"
               >
                 <Logo size="lg" showTagline={true} />
-              </div>
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-finance-100 text-finance-900 text-xs font-bold mb-2">
-                <Shield className="w-3.5 h-3.5 text-finance-700" />
-                <span>Executive &amp; Audit Portal</span>
               </div>
               <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
                 Administrator Portal

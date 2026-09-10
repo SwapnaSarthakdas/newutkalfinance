@@ -29,7 +29,7 @@ const Navbar = ({ onNavigate, currentPage = 'home' }) => {
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 transition-all relative">
+    <header className="fixed top-0 left-0 right-0 z-50 w-full bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs">
       {/* Blurred banner in navbar background */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-[0.08] z-0">
         <img src="/banner.jpg" alt="" className="w-full h-full object-cover filter blur-xl scale-125" />
@@ -119,7 +119,11 @@ const Navbar = ({ onNavigate, currentPage = 'home' }) => {
               <>
                 <button
                   onClick={() => onNavigate('login')}
-                  className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold text-black hover:text-finance-600 hover:bg-slate-100 transition-colors"
+                  className={`inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
+                    currentPage === 'login'
+                      ? 'bg-finance-50 text-finance-700 font-bold border border-finance-300 shadow-xs'
+                      : 'text-black hover:text-finance-600 hover:bg-slate-100'
+                  }`}
                 >
                   <LogIn className="w-4 h-4" />
                   Admin Login
@@ -140,7 +144,11 @@ const Navbar = ({ onNavigate, currentPage = 'home' }) => {
             {!user ? (
               <button
                 onClick={() => onNavigate('login')}
-                className="text-xs font-bold text-finance-600 px-2.5 py-1.5 rounded-lg border border-finance-200 bg-finance-50 hover:bg-finance-100 flex items-center gap-1"
+                className={`text-xs font-bold px-2.5 py-1.5 rounded-lg border flex items-center gap-1 transition-colors ${
+                  currentPage === 'login'
+                    ? 'border-finance-600 bg-finance-600 text-white shadow-xs'
+                    : 'border-finance-200 bg-finance-50 text-finance-600 hover:bg-finance-100'
+                }`}
               >
                 <LogIn className="w-3.5 h-3.5" />
                 <span>Admin Login</span>
@@ -213,7 +221,11 @@ const Navbar = ({ onNavigate, currentPage = 'home' }) => {
                     setMobileMenuOpen(false);
                     onNavigate('login');
                   }}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-800 text-sm font-semibold hover:bg-slate-50"
+                  className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold transition-colors ${
+                    currentPage === 'login'
+                      ? 'border-finance-500 bg-finance-50 text-finance-700 font-bold shadow-xs'
+                      : 'border-slate-200 text-slate-800 hover:bg-slate-50'
+                  }`}
                 >
                   <LogIn className="w-4 h-4 text-finance-600" />
                   Admin Login
