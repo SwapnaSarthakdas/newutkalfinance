@@ -1,0 +1,191 @@
+{
+  "branches": [
+    {
+      "id": "BR-001",
+      "code": "075101",
+      "name": "Bhubaneswar HQ",
+      "district": "Khurda",
+      "state": "Odisha",
+      "manager_name": "Bhagirathi Mohapatra",
+      "phone": "0674-2548900",
+      "address": "Plot 142, VIP Area, Saheed Nagar, Bhubaneswar"
+    },
+    {
+      "id": "BR-002",
+      "code": "075302",
+      "name": "Cuttack Main Branch",
+      "district": "Cuttack",
+      "state": "Odisha",
+      "manager_name": "Minati Mishra",
+      "phone": "0671-2415600",
+      "address": "Buxi Bazar, Near High Court, Cuttack"
+    },
+    {
+      "id": "BR-003",
+      "code": "076903",
+      "name": "Rourkela Commercial",
+      "district": "Sundargarh",
+      "state": "Odisha",
+      "manager_name": "P. K. Mohanty",
+      "phone": "0661-2501200",
+      "address": "Civil Township, Sector 4, Rourkela"
+    },
+    {
+      "id": "BR-004",
+      "code": "076104",
+      "name": "Berhampur Branch",
+      "district": "Ganjam",
+      "state": "Odisha",
+      "manager_name": "A. K. Sahu",
+      "phone": "0680-2223400",
+      "address": "Old Bus Stand Road, Berhampur"
+    },
+    {
+      "id": "BR-005",
+      "code": "075205",
+      "name": "Puri Grand Road",
+      "district": "Puri",
+      "state": "Odisha",
+      "manager_name": "R. K. Tripathy",
+      "phone": "06752-224500",
+      "address": "Grand Road, Near Temple, Puri"
+    }
+  ],
+  "associates": [
+    {
+      "id": "ASC-001",
+      "code": "UTK-ASC-101",
+      "name": "Pradeep Kumar Jena",
+      "branch_id": "BR-001",
+      "phone": "+91 94370 12345",
+      "status": "Active"
+    },
+    {
+      "id": "ASC-002",
+      "code": "UTK-ASC-102",
+      "name": "Manoj Kumar Panda",
+      "branch_id": "BR-002",
+      "phone": "+91 94371 67890",
+      "status": "Active"
+    },
+    {
+      "id": "ASC-003",
+      "code": "UTK-ASC-103",
+      "name": "Soumya Ranjan Das",
+      "branch_id": "BR-003",
+      "phone": "+91 94372 11223",
+      "status": "Active"
+    },
+    {
+      "id": "ASC-004",
+      "code": "UTK-ASC-104",
+      "name": "Gitanjali Mohapatra",
+      "branch_id": "BR-001",
+      "phone": "+91 94373 44556",
+      "status": "Active"
+    }
+  ],
+  "users": [
+    {
+      "id": "USR-ADM-001",
+      "username": "admin",
+      "email": "admin@utkalfinance.com",
+      "mobile_number": "9861000001",
+      "emp_id": "EMP-ADM-001",
+      "password_hash": "67d786cdc524f428891b8ab95a7f576a:02f03bbd942af65f71bf41ca15fe6e944bdc4c72fd7ea98c424f8ade93212b83377dbfa50af0698ea53da551c850301575cbc231f8f8dd3cb7ce5b57baa738c0",
+      "role": "ADMIN",
+      "failed_login_attempts": 0,
+      "locked_until": null,
+      "created_at": "2024-01-01T00:00:00.000Z",
+      "updated_at": "2026-09-10T05:41:56.491Z"
+    }
+  ],
+  "members": [],
+  "membership_applications": [],
+  "addresses": [],
+  "nominees": [],
+  "witnesses": [],
+  "documents": [],
+  "share_details": [],
+  "sessions": [
+    {
+      "id": "SES-2026-8080",
+      "user_id": "USR-ADM-001",
+      "token": "token_1789018916507_95e862ac502d4d13343d0a9caa8db9c2",
+      "expires_at": "2026-09-17T05:41:56.517Z",
+      "created_at": "2026-09-10T05:41:56.518Z"
+    },
+    {
+      "id": "SES-2026-5882",
+      "user_id": "USR-ADM-001",
+      "token": "token_1788863549423_648f4f87c5a5e166890060832bb12406",
+      "expires_at": "2026-09-15T10:32:29.440Z",
+      "created_at": "2026-09-08T10:32:29.440Z"
+    },
+    {
+      "id": "SES-2026-1464",
+      "user_id": "USR-ADM-001",
+      "token": "token_1788847735427_f521dcb92e7fb49c10f4c0e073c35170",
+      "expires_at": "2026-09-15T06:08:55.433Z",
+      "created_at": "2026-09-08T06:08:55.433Z"
+    },
+    {
+      "id": "SES-2026-4168",
+      "user_id": "USR-ADM-001",
+      "token": "token_1788847137101_774ce9f6ca8e7a4e04310a84e78a23e1",
+      "expires_at": "2026-09-15T05:58:57.102Z",
+      "created_at": "2026-09-08T05:58:57.103Z"
+    }
+  ],
+  "notifications": [],
+  "audit_logs": [
+    {
+      "id": "AUDIT-1789018916538-252",
+      "actor_id": "USR-ADM-001",
+      "actor_name": "admin",
+      "actor_role": "ADMIN",
+      "action": "LOGIN_SUCCESS",
+      "target_type": "user",
+      "target_id": "USR-ADM-001",
+      "details": "Logged in via EMAIL (admin@utkalfinance.com)",
+      "timestamp": "2026-09-10T05:41:56.538Z",
+      "created_at": "2026-09-10T05:41:56.538Z"
+    },
+    {
+      "id": "AUDIT-1788863549454-651",
+      "actor_id": "USR-ADM-001",
+      "actor_name": "admin",
+      "actor_role": "ADMIN",
+      "action": "LOGIN_SUCCESS",
+      "target_type": "user",
+      "target_id": "USR-ADM-001",
+      "details": "Logged in via EMAIL (admin@utkalfinance.com)",
+      "timestamp": "2026-09-08T10:32:29.454Z",
+      "created_at": "2026-09-08T10:32:29.454Z"
+    },
+    {
+      "id": "AUDIT-1788847735437-600",
+      "actor_id": "USR-ADM-001",
+      "actor_name": "admin",
+      "actor_role": "ADMIN",
+      "action": "LOGIN_SUCCESS",
+      "target_type": "user",
+      "target_id": "USR-ADM-001",
+      "details": "Logged in via EMAIL (admin@utkalfinance.com)",
+      "timestamp": "2026-09-08T06:08:55.437Z",
+      "created_at": "2026-09-08T06:08:55.437Z"
+    },
+    {
+      "id": "AUDIT-1788847137111-937",
+      "actor_id": "USR-ADM-001",
+      "actor_name": "admin",
+      "actor_role": "ADMIN",
+      "action": "LOGIN_SUCCESS",
+      "target_type": "user",
+      "target_id": "USR-ADM-001",
+      "details": "Logged in via EMAIL (admin@utkalfinance.com)",
+      "timestamp": "2026-09-08T05:58:57.112Z",
+      "created_at": "2026-09-08T05:58:57.112Z"
+    }
+  ]
+}

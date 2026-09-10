@@ -1,0 +1,78 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body {
+    @apply bg-slate-50 text-slate-900 antialiased font-sans overflow-x-clip;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Official Logo Dark Navy Theme Styles (#003E9E / #0A3F9F) */
+:root {
+  --logo-navy: #003E9E;
+  --logo-navy-variant: #0A3F9F;
+  --logo-navy-hover: #002E78;
+  --logo-navy-dark: #001B47;
+}
+
+.text-logo-navy,
+.text-finance-600 {
+  color: #003E9E !important;
+}
+
+.bg-logo-navy,
+.bg-finance-600 {
+  background-color: #003E9E !important;
+}
+
+.hover\:bg-logo-navy:hover,
+.hover\:bg-finance-700:hover {
+  background-color: #002E78 !important;
+}
+
+.hover\:text-finance-600:hover {
+  color: #003E9E !important;
+}
+
+.border-logo-navy {
+  border-color: #003E9E !important;
+}
+
+.accent-finance-600 {
+  accent-color: #003E9E !important;
+}
+
+/* Custom modern scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Clean print styles for statement printing */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+}
