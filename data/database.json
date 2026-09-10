@@ -124,7 +124,7 @@
       "failed_login_attempts": 0,
       "locked_until": null,
       "created_at": "2024-01-01T00:00:00.000Z",
-      "updated_at": "2026-09-10T18:46:52.265Z"
+      "updated_at": "2026-09-10T19:29:13.398Z"
     }
   ],
   "members": [
@@ -622,6 +622,20 @@
   ],
   "sessions": [
     {
+      "id": "SES-2026-9097",
+      "user_id": "USR-ADM-001",
+      "token": "token_1789068553401_0ceb60a8129c41214988da8df317214d",
+      "expires_at": "2026-09-17T19:29:13.401Z",
+      "created_at": "2026-09-10T19:29:13.401Z"
+    },
+    {
+      "id": "SES-2026-6076",
+      "user_id": "USR-ADM-001",
+      "token": "token_1789068524665_abf3ff820058fa1be6193679afa89434",
+      "expires_at": "2026-09-17T19:28:44.666Z",
+      "created_at": "2026-09-10T19:28:44.666Z"
+    },
+    {
       "id": "SES-2026-9875",
       "user_id": "USR-ADM-001",
       "token": "token_1789066012267_19a1254bc810672a754a53835e8eba0f",
@@ -745,6 +759,30 @@
     }
   ],
   "audit_logs": [
+    {
+      "id": "AUDIT-1789068553404-648",
+      "actor_id": "USR-ADM-001",
+      "actor_name": "admin",
+      "actor_role": "ADMIN",
+      "action": "LOGIN_SUCCESS",
+      "target_type": "user",
+      "target_id": "USR-ADM-001",
+      "details": "Logged in via EMAIL (admin@utkalfinance.com)",
+      "timestamp": "2026-09-10T19:29:13.404Z",
+      "created_at": "2026-09-10T19:29:13.404Z"
+    },
+    {
+      "id": "AUDIT-1789068524669-351",
+      "actor_id": "USR-ADM-001",
+      "actor_name": "admin",
+      "actor_role": "ADMIN",
+      "action": "LOGIN_SUCCESS",
+      "target_type": "user",
+      "target_id": "USR-ADM-001",
+      "details": "Logged in via EMAIL (admin@utkalfinance.com)",
+      "timestamp": "2026-09-10T19:28:44.669Z",
+      "created_at": "2026-09-10T19:28:44.669Z"
+    },
     {
       "id": "AUDIT-1789066012270-880",
       "actor_id": "USR-ADM-001",

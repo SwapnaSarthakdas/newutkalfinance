@@ -1244,7 +1244,7 @@ const RegisterPage = ({ onNavigate }) => {
             <div className="my-4 p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-left text-xs flex items-start gap-2.5">
               <ShieldCheck className="w-4 h-4 text-amber-700 flex-shrink-0 mt-0.5" />
               <div className="text-amber-950">
-                <strong>Admin / Agent Verification Queue:</strong> Your registration form and ₹200 payment request have been securely routed to the Administrator. When the admin verifies the payment and clicks <strong>"Payment Successful"</strong>, your Member ID will be activated for login.
+                <strong>Admin / Agent Verification Queue:</strong> Your registration form and ₹200 payment request have been securely routed to the Administrator. When the admin verifies the payment and clicks <strong>"Payment Successful"</strong>, your Member ID will be officially activated in the society registry.
               </div>
             </div>
 

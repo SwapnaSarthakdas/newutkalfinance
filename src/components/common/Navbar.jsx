@@ -404,20 +404,20 @@ const Navbar = ({ onNavigate, currentPage = 'home' }) => {
                   )}
                 </div>
 
-                {/* Login Dropdown / Authenticated User Portal */}
+                {/* Authenticated Admin Portal or Admin Login */}
                 {user ? (
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => handleNav(role === 'ADMIN' ? 'admin-dashboard' : 'member-dashboard')}
-                      className="inline-flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-finance-900 hover:bg-finance-800 text-white text-xs sm:text-sm font-bold shadow-md transition-all"
+                      onClick={() => handleNav('admin-dashboard')}
+                      className="inline-flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-finance-900 hover:bg-finance-800 text-white text-xs sm:text-sm font-bold shadow-md transition-all cursor-pointer"
                     >
-                      <User className="w-4 h-4 text-emerald-400" />
-                      <span className="hidden sm:inline">Portal</span>
+                      <Shield className="w-4 h-4 text-amber-400" />
+                      <span className="hidden sm:inline">Admin Console</span>
                       <ArrowRight className="w-3.5 h-3.5" />
                     </button>
                     <button
                       onClick={logout}
-                      className="px-2.5 py-2 text-xs font-semibold text-slate-500 hover:text-slate-800"
+                      className="px-2.5 py-2 text-xs font-semibold text-slate-500 hover:text-slate-800 cursor-pointer"
                     >
                       Sign Out
                     </button>
@@ -425,18 +425,11 @@ const Navbar = ({ onNavigate, currentPage = 'home' }) => {
                 ) : (
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => handleNav('login')}
-                      className="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-finance-600 hover:bg-finance-700 text-white text-xs sm:text-sm font-bold shadow-md hover:shadow-lg transition-all cursor-pointer"
-                    >
-                      <User className="w-3.5 h-3.5" />
-                      <span>Member Login</span>
-                    </button>
-                    <button
                       onClick={() => handleNav('admin-login')}
-                      className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-purple-900 to-slate-900 hover:from-purple-800 hover:to-slate-800 text-white text-xs sm:text-sm font-bold shadow-md hover:shadow-lg transition-all cursor-pointer"
+                      className="inline-flex items-center gap-1.5 px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-purple-900 via-slate-900 to-finance-950 hover:from-purple-800 hover:to-slate-800 text-white text-xs sm:text-sm font-bold shadow-md hover:shadow-lg transition-all cursor-pointer"
                     >
                       <Shield className="w-3.5 h-3.5 text-amber-400" />
-                      <span className="hidden sm:inline">Admin</span>
+                      <span>Admin Login</span>
                     </button>
                   </div>
                 )}
@@ -545,21 +538,14 @@ const Navbar = ({ onNavigate, currentPage = 'home' }) => {
           <div className="xl:hidden bg-white border-b border-slate-300 max-h-[85vh] overflow-y-auto shadow-2xl animate-in slide-in-from-top-2">
             <div className="p-4 space-y-4">
 
-              {/* Dual Member & Admin Login in Mobile Drawer */}
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => handleNav('login')}
-                  className="py-2.5 rounded-xl bg-finance-600 text-white hover:bg-finance-700 text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
-                >
-                  <User className="w-3.5 h-3.5" />
-                  <span>Member Portal</span>
-                </button>
+              {/* Administrator Login in Mobile Drawer */}
+              <div>
                 <button
                   onClick={() => handleNav('admin-login')}
-                  className="py-2.5 rounded-xl bg-gradient-to-r from-purple-900 to-slate-900 text-white hover:from-purple-800 hover:to-slate-800 text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+                  className="w-full py-2.5 rounded-xl bg-gradient-to-r from-purple-900 via-slate-900 to-finance-950 text-white hover:from-purple-800 hover:to-slate-800 text-xs font-bold flex items-center justify-center gap-2 shadow-sm cursor-pointer"
                 >
-                  <Shield className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Admin Console</span>
+                  <Shield className="w-4 h-4 text-amber-400" />
+                  <span>Administrator Login Console</span>
                 </button>
               </div>
 

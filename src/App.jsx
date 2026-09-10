@@ -68,21 +68,23 @@ const AppController = () => {
       }
     }
 
-    // Role-based route guard for member dashboard
+    // Route guard for member dashboard - redirect to admin dashboard or admin login
     if (routeId === 'member-dashboard') {
       let isAuth = isAuthenticated || !!user;
+      let currentRole = role;
       const savedSession = localStorage.getItem('utkal_finance_auth_v1');
       if (savedSession) {
         try {
           const parsed = JSON.parse(savedSession);
           if (parsed.user) isAuth = true;
+          if (parsed.role) currentRole = parsed.role;
         } catch {}
       }
 
-      if (!isAuth) {
-        window.location.hash = 'login';
-        setCurrentRoute('login');
-        addToast('Please sign in to access your Member Portal.', 'info');
+      if (!isAuth || currentRole !== 'ADMIN') {
+        window.location.hash = 'admin-login';
+        setCurrentRoute('admin-login');
+        addToast('Restricted: Administrator credentials required.', 'info');
         return;
       }
     }
@@ -126,10 +128,9 @@ const AppController = () => {
     switch (currentRoute) {
       case 'login':
       case 'member-login':
-        return <LoginPage onNavigate={navigate} initialTab="MEMBER" />;
       case 'admin-login':
       case 'admin':
-        return <LoginPage onNavigate={navigate} initialTab="ADMIN" />;
+        return <LoginPage onNavigate={navigate} />;
       case 'register':
         return <RegisterPage onNavigate={navigate} />;
       case 'membership-form':
@@ -151,13 +152,10 @@ const AppController = () => {
             if (parsed.user) isAuth = true;
           } catch {}
         }
-        if (!isAuth) {
-          return <LoginPage onNavigate={navigate} initialTab="MEMBER" />;
+        if (!isAuth || currentRole !== 'ADMIN') {
+          return <LoginPage onNavigate={navigate} />;
         }
-        if (currentRole === 'ADMIN') {
-          return <AdminDashboard onNavigate={navigate} />;
-        }
-        return <MemberDashboard onNavigate={navigate} />;
+        return <AdminDashboard onNavigate={navigate} />;
       }
       case 'admin-dashboard': {
         const savedSession = localStorage.getItem('utkal_finance_auth_v1');
