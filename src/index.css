@@ -12,12 +12,15 @@
   }
 }
 
-/* Official Logo Dark Navy Theme Styles (#003E9E / #0A3F9F) */
+/* Official Logo Dark Navy Theme Styles (#003E9E / #0A3F9F) and Utkarsh Purple (#4A2C7D) */
 :root {
   --logo-navy: #003E9E;
   --logo-navy-variant: #0A3F9F;
   --logo-navy-hover: #002E78;
   --logo-navy-dark: #001B47;
+  --utkarsh-purple: #4A2C7D;
+  --utkarsh-purple-dark: #371E60;
+  --utkarsh-purple-light: #5E399B;
 }
 
 .text-logo-navy,
@@ -45,6 +48,63 @@
 
 .accent-finance-600 {
   accent-color: #003E9E !important;
+}
+
+/* Utkarsh Bank Theme Utilities */
+.bg-utkarsh-purple {
+  background-color: #4A2C7D !important;
+}
+.text-utkarsh-purple {
+  color: #4A2C7D !important;
+}
+.border-utkarsh-purple {
+  border-color: #4A2C7D !important;
+}
+
+/* Marquee Scrolling Animation */
+@keyframes marquee-scroll {
+  0% {
+    transform: translateX(100%);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+.animate-marquee {
+  display: inline-block;
+  white-space: nowrap;
+  animation: marquee-scroll 28s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+/* High Contrast View Mode */
+body.high-contrast-mode {
+  filter: contrast(115%);
+  background-color: #000000 !important;
+}
+body.high-contrast-mode .bg-white {
+  background-color: #0d131f !important;
+  color: #ffffff !important;
+}
+body.high-contrast-mode .text-slate-900,
+body.high-contrast-mode .text-slate-800,
+body.high-contrast-mode .text-slate-700 {
+  color: #f1f5f9 !important;
+}
+
+/* Font scale modes */
+body.font-size-sm {
+  font-size: 14px;
+}
+body.font-size-md {
+  font-size: 16px;
+}
+body.font-size-lg {
+  font-size: 18px;
 }
 
 /* Custom modern scrollbars */
@@ -79,3 +139,4 @@
     display: block !important;
   }
 }
+

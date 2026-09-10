@@ -5,5 +5,11 @@ echo ====================================================
 echo   Starting Utkal Finance Application Server...
 echo ====================================================
 echo.
-node server.js
+
+if not exist "dist\index.html" (
+    echo Building latest assets...
+    call npm run build
+)
+
+node server.js --open
 pause

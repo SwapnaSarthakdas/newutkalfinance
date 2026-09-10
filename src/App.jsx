@@ -18,9 +18,15 @@ const AppController = () => {
 
   const getNormalizedRoute = () => {
     const raw = (window.location.hash || '').replace(/^#\/?/, '').trim();
-    if (raw) return raw;
+    if (raw) {
+      if (raw === 'member-dashboard') return 'login';
+      return raw;
+    }
     const path = (window.location.pathname || '').replace(/^\/+/, '').trim();
-    if (path && path !== 'index.html') return path;
+    if (path && path !== 'index.html') {
+      if (path === 'member-dashboard') return 'login';
+      return path;
+    }
     return 'home';
   };
 
@@ -37,7 +43,7 @@ const AppController = () => {
   }, []);
 
   const navigate = (routeId) => {
-    // Role-based route guard
+    // Role-based route guard for admin dashboard
     if (routeId === 'admin-dashboard') {
       let currentRole = role;
       let isAuth = isAuthenticated || !!user;
@@ -50,34 +56,33 @@ const AppController = () => {
         } catch {}
       }
 
+      if (!isAuth || currentRole !== 'ADMIN') {
+        window.location.hash = 'admin-login';
+        setCurrentRoute('admin-login');
+        if (!isAuth) {
+          addToast('Please log in with administrator credentials.', 'warning');
+        } else {
+          addToast('Administrator privileges required. Please sign in as admin.', 'warning');
+        }
+        return;
+      }
+    }
+
+    // Role-based route guard for member dashboard
+    if (routeId === 'member-dashboard') {
+      let isAuth = isAuthenticated || !!user;
+      const savedSession = localStorage.getItem('utkal_finance_auth_v1');
+      if (savedSession) {
+        try {
+          const parsed = JSON.parse(savedSession);
+          if (parsed.user) isAuth = true;
+        } catch {}
+      }
+
       if (!isAuth) {
         window.location.hash = 'login';
         setCurrentRoute('login');
-        addToast('Please log in with administrator credentials.', 'warning');
-        return;
-      }
-      if (currentRole !== 'ADMIN') {
-        window.location.hash = 'member-dashboard';
-        setCurrentRoute('member-dashboard');
-        addToast('Access denied: Administrator privileges required.', 'warning');
-        return;
-      }
-    }
-
-    const savedSession = localStorage.getItem('utkal_finance_auth_v1');
-    let hasValidUser = isAuthenticated || !!user;
-    if (!hasValidUser && savedSession) {
-      try {
-        const parsed = JSON.parse(savedSession);
-        if (parsed && parsed.user) hasValidUser = true;
-      } catch {}
-    }
-
-    if (routeId === 'member-dashboard') {
-      if (!hasValidUser) {
-        window.location.hash = 'login';
-        setCurrentRoute('login');
-        addToast('Please log in to access your member dashboard.', 'info');
+        addToast('Please sign in to access your Member Portal.', 'info');
         return;
       }
     }
@@ -120,9 +125,11 @@ const AppController = () => {
   const renderCurrentView = () => {
     switch (currentRoute) {
       case 'login':
+      case 'member-login':
+        return <LoginPage onNavigate={navigate} initialTab="MEMBER" />;
       case 'admin-login':
       case 'admin':
-        return <LoginPage onNavigate={navigate} />;
+        return <LoginPage onNavigate={navigate} initialTab="ADMIN" />;
       case 'register':
         return <RegisterPage onNavigate={navigate} />;
       case 'membership-form':
@@ -135,15 +142,20 @@ const AppController = () => {
         return <BrochurePage onNavigate={navigate} />;
       case 'member-dashboard': {
         const savedSession = localStorage.getItem('utkal_finance_auth_v1');
-        let hasValidUser = isAuthenticated || !!user;
-        if (!hasValidUser && savedSession) {
+        let currentRole = role;
+        let isAuth = isAuthenticated || !!user;
+        if (savedSession) {
           try {
             const parsed = JSON.parse(savedSession);
-            if (parsed && parsed.user) hasValidUser = true;
+            if (parsed.role) currentRole = parsed.role;
+            if (parsed.user) isAuth = true;
           } catch {}
         }
-        if (!hasValidUser) {
-          return <LoginPage onNavigate={navigate} />;
+        if (!isAuth) {
+          return <LoginPage onNavigate={navigate} initialTab="MEMBER" />;
+        }
+        if (currentRole === 'ADMIN') {
+          return <AdminDashboard onNavigate={navigate} />;
         }
         return <MemberDashboard onNavigate={navigate} />;
       }
@@ -159,7 +171,7 @@ const AppController = () => {
           } catch {}
         }
         if (!isAuth || currentRole !== 'ADMIN') {
-          return <LoginPage onNavigate={navigate} />;
+          return <LoginPage onNavigate={navigate} initialTab="ADMIN" />;
         }
         return <AdminDashboard onNavigate={navigate} />;
       }
@@ -170,7 +182,7 @@ const AppController = () => {
   };
 
   // Determine if constant navbar should be displayed (homepage, login, and home-section routes)
-  const isLoginRoute = ['login', 'admin-login', 'admin'].includes(currentRoute);
+  const isLoginRoute = ['login', 'admin-login', 'admin', 'member-login'].includes(currentRoute);
   const isPublicNavRoute =
     ['home', 'login', 'admin-login', 'admin', 'about', 'services', 'why-us', 'calculator', 'contact'].includes(currentRoute) ||
     !currentRoute ||
@@ -181,7 +193,7 @@ const AppController = () => {
       {isPublicNavRoute && (
         <>
           <Navbar onNavigate={navigate} currentPage={isLoginRoute ? 'login' : 'home'} />
-          <div className="h-[101px] sm:h-[133px] md:h-[137px] w-full flex-shrink-0 pointer-events-none" aria-hidden="true" />
+          <div className="h-[96px] sm:h-[112px] xl:h-[152px] w-full flex-shrink-0 pointer-events-none" aria-hidden="true" />
         </>
       )}
       <main className="flex-1 flex flex-col">

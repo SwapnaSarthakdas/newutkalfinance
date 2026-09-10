@@ -44,15 +44,24 @@ const server = http.createServer((req, res) => {
     return handleApiRequest(req, res);
   }
 
-  let safePath = path.normalize(decodeURI(req.url.split('?')[0])).replace(/^(\.\.[\/\\])+/, '');
-  if (safePath === '/' || safePath === '') {
-    safePath = '/index.html';
+  let rawPath = decodeURI(req.url.split('?')[0]);
+  let cleanPath = rawPath.replace(/^[\/\\]+/, '');
+  if (!cleanPath || cleanPath === 'index.html') {
+    cleanPath = 'index.html';
   }
 
-  let filePath = path.join(DIST_DIR, safePath);
+  let filePath = path.join(DIST_DIR, cleanPath);
+  const ext = path.extname(filePath).toLowerCase();
 
   fs.stat(filePath, (err, stats) => {
     if (err || !stats.isFile()) {
+      // If client requested a static asset with an extension (e.g. .js, .css, images), return 404
+      if (ext && ext !== '.html') {
+        res.writeHead(404, { 'Content-Type': 'text/plain' });
+        res.end('404 Not Found');
+        return;
+      }
+      // Otherwise fallback to index.html for Single Page App client routing
       filePath = path.join(DIST_DIR, 'index.html');
     }
 
@@ -78,9 +87,54 @@ const server = http.createServer((req, res) => {
   });
 });
 
+// Validate dist directory
+if (!fs.existsSync(path.join(DIST_DIR, 'index.html'))) {
+  console.warn('\n[WARNING] Compiled production assets not found in dist/.');
+  console.warn('Run "npm run build" to compile the latest frontend.\n');
+}
+
+server.on('error', async (err) => {
+  if (err.code === 'EADDRINUSE') {
+    try {
+      const checkRes = await fetch(`http://localhost:${PORT}/`, { signal: AbortSignal.timeout(1500) });
+      if (checkRes.ok) {
+        console.log('\n======================================================');
+        console.log('   UTKAL FINANCE IS ALREADY RUNNING ON PORT ' + PORT);
+        console.log('======================================================');
+        console.log(`Localhost: http://localhost:${PORT}/`);
+        console.log('======================================================\n');
+        if (process.env.OPEN_BROWSER === 'true' || process.argv.includes('--open')) {
+          const cmd = process.platform === 'win32' ? `start http://localhost:${PORT}/` : `open http://localhost:${PORT}/`;
+          const { exec } = await import('child_process');
+          exec(cmd);
+        }
+        process.exit(0);
+      }
+    } catch {}
+
+    console.error(`\n[ERROR] Port ${PORT} is already in use by another process.`);
+    console.error(`Please close any existing terminal running on port ${PORT} or restart.\n`);
+    process.exit(1);
+  } else {
+    console.error('Server failed to start:', err);
+    process.exit(1);
+  }
+});
+
 // Listening without HOST binds dual-stack to both IPv4 (0.0.0.0, 127.0.0.1) and IPv6 (::, ::1/localhost)
 server.listen(PORT, () => {
-  console.log(`Utkal Finance Server is active on port ${PORT}`);
+  console.log('\n======================================================');
+  console.log('   NEW UTKAL FINANCE - APPLICATION SERVER ACTIVE      ');
+  console.log('======================================================');
+  console.log(`Port:      ${PORT}`);
   console.log(`Localhost: http://localhost:${PORT}/`);
-  console.log(`IPv4:      http://127.0.0.1:${PORT}/`);
+  console.log(`Network:   http://127.0.0.1:${PORT}/`);
+  console.log('======================================================\n');
+
+  if (process.env.OPEN_BROWSER === 'true' || process.argv.includes('--open')) {
+    const cmd = process.platform === 'win32' ? `start http://localhost:${PORT}/` : `open http://localhost:${PORT}/`;
+    import('child_process').then(({ exec }) => {
+      exec(cmd);
+    }).catch(() => {});
+  }
 });

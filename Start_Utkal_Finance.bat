@@ -1,14 +1,27 @@
 @echo off
-title Utkal Finance Web Application
+title New Utkal Finance Web Application
 cd /d "%~dp0"
 echo ==========================================================
-echo    UTKAL FINANCE - SMART FINANCIAL MANAGEMENT
+echo    NEW UTKAL FINANCE - SMART FINANCIAL MANAGEMENT
 echo ==========================================================
 echo.
-echo Starting application server on http://localhost:5173 ...
+
+REM Check if dependencies are installed
+if not exist "node_modules\" (
+    echo [1/3] Installing dependencies...
+    call npm install
+)
+
+REM Check if dist exists; if not, compile production bundle
+if not exist "dist\index.html" (
+    echo [2/3] Building production assets...
+    call npm run build
+)
+
+echo [3/3] Launching application server and opening browser...
+echo Local URL: http://localhost:5173/
 echo.
 
-start "" "http://localhost:5173"
-node server.js
+node server.js --open
 
 pause

@@ -1,16 +1,35 @@
-import React, { useState } from 'react';
-import { Eye, EyeOff, Lock, Shield, ArrowRight, AlertCircle, CheckCircle2, KeyRound } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import {
+  Eye,
+  EyeOff,
+  Lock,
+  Shield,
+  User,
+  ArrowRight,
+  AlertCircle,
+  CheckCircle2,
+  KeyRound,
+  Sparkles,
+  Smartphone
+} from 'lucide-react';
 import Logo from '../../components/common/Logo';
 import Modal from '../../components/common/Modal';
 import { useAuth } from '../../context/AuthContext';
 import { useFinance } from '../../context/FinanceContext';
 
-const LoginPage = ({ onNavigate }) => {
+const LoginPage = ({ onNavigate, initialTab = 'MEMBER' }) => {
   const { login, loginAsDemo } = useAuth();
   const { addToast } = useFinance();
 
-  const [identifier, setIdentifier] = useState('admin@utkalfinance.com');
-  const [password, setPassword] = useState('admin123');
+  const [activeTab, setActiveTab] = useState(initialTab); // 'MEMBER' | 'ADMIN'
+
+  // Form Fields
+  const [identifier, setIdentifier] = useState(
+    initialTab === 'ADMIN' ? 'admin@utkalfinance.com' : '9876543210'
+  );
+  const [password, setPassword] = useState(
+    initialTab === 'ADMIN' ? 'admin123' : 'member123'
+  );
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
 
@@ -23,36 +42,62 @@ const LoginPage = ({ onNavigate }) => {
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotSubmitted, setForgotSubmitted] = useState(false);
 
+  // Switch tab handler
+  const handleTabSwitch = (tab) => {
+    setActiveTab(tab);
+    setErrorMsg('');
+    setSuccessMsg('');
+    if (tab === 'ADMIN') {
+      setIdentifier('admin@utkalfinance.com');
+      setPassword('admin123');
+    } else {
+      setIdentifier('9876543210');
+      setPassword('member123');
+    }
+  };
+
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
     setErrorMsg('');
     setSuccessMsg('');
 
-    const targetId = identifier.trim() || 'admin@utkalfinance.com';
-    const targetPass = password || 'admin123';
+    const targetId = identifier.trim();
+    const targetPass = password;
+
+    if (!targetId || !targetPass) {
+      setErrorMsg('Please enter your credentials to sign in.');
+      return;
+    }
 
     setIsLoading(true);
     try {
-      await login(targetId, targetPass, 'ADMIN');
-      setSuccessMsg('Administrator authentication verified! Redirecting to Admin Portal...');
+      const res = await login(targetId, targetPass, activeTab);
+      setSuccessMsg(`Authentication successful! Redirecting to ${activeTab === 'ADMIN' ? 'Admin Console' : 'Member Portal'}...`);
       setTimeout(() => {
-        onNavigate('admin-dashboard');
-      }, 300);
+        onNavigate(res.role === 'ADMIN' ? 'admin-dashboard' : 'member-dashboard');
+      }, 350);
     } catch (err) {
-      setErrorMsg(err.message || 'Authentication failed. Please check administrator credentials.');
+      setErrorMsg(
+        err.message || 'Authentication failed. Please verify your credentials.'
+      );
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleQuickDemoLogin = () => {
+  const handleQuickDemoLogin = (demoRole) => {
     setIsLoading(true);
     setErrorMsg('');
     setTimeout(() => {
-      loginAsDemo('ADMIN');
-      addToast('Logged in as Administrator (Operations Head Desk)', 'success');
-      onNavigate('admin-dashboard');
-    }, 400);
+      loginAsDemo(demoRole);
+      addToast(
+        demoRole === 'ADMIN'
+          ? 'Logged in as Administrator (Managing Director Desk)'
+          : 'Logged in as Demo Member (Rajesh Sharma - Active)',
+        'success'
+      );
+      onNavigate(demoRole === 'ADMIN' ? 'admin-dashboard' : 'member-dashboard');
+    }, 350);
   };
 
   const handleForgotSubmit = (e) => {
@@ -60,93 +105,154 @@ const LoginPage = ({ onNavigate }) => {
     if (!forgotEmail) return;
     setForgotSubmitted(true);
     setTimeout(() => {
-      addToast('Password reset link has been dispatched to your registered administrator email.', 'info');
+      addToast(
+        activeTab === 'ADMIN'
+          ? 'Password recovery OTP has been dispatched to authorized administrator email.'
+          : 'Password recovery OTP has been sent to your registered email & mobile number.',
+        'info'
+      );
       setForgotModalOpen(false);
       setForgotSubmitted(false);
       setForgotEmail('');
-    }, 1200);
+    }, 1000);
   };
 
   return (
     <div className="flex-1 flex flex-col justify-between bg-slate-50">
       {/* Main Login Card Container */}
-      <div className="flex-1 flex items-center justify-center p-4 sm:p-6 py-6 sm:py-8">
-        <div className="w-full max-w-md bg-white rounded-3xl shadow-xl border border-slate-200/80 overflow-hidden">
+      <div className="flex-1 flex items-center justify-center p-4 sm:p-6 py-8 sm:py-12">
+        <div className="w-full max-w-md bg-white rounded-3xl shadow-xl border border-slate-200/80 overflow-hidden animate-in fade-in duration-300">
+          
           {/* Header */}
           <div className="p-6 sm:p-8 pb-4">
             <div className="text-center mb-6 flex flex-col items-center">
-              <div 
-                className="mb-4 cursor-pointer hover:opacity-95 transition-opacity" 
+              <div
+                className="mb-4 cursor-pointer hover:opacity-95 transition-opacity"
                 onClick={() => onNavigate('home')}
                 title="Return to Utkal Finance Home"
               >
-                <Logo size="lg" showTagline={true} />
+                <Logo size="md" showTagline={true} />
               </div>
-              <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-                Administrator Portal
+
+              <h2 className="text-2xl font-black text-slate-900 tracking-tight">
+                {activeTab === 'ADMIN' ? 'Administrator Console' : 'Member Portal Login'}
               </h2>
-              <p className="text-xs text-slate-500 mt-1">
-                Authorized Utkal Finance executive &amp; administrative personnel only
+              <p className="text-xs text-slate-500 mt-1 max-w-xs">
+                {activeTab === 'ADMIN'
+                  ? 'Executive management, member KYC verification, loan approvals & statutory compliance'
+                  : 'Access your savings account, view FD deposits, check active loans, and download receipts'}
               </p>
             </div>
 
-            {/* Default Demo Helper Banner */}
-            <div className="mb-4 p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
-              <div className="flex flex-col text-left">
-                <span className="font-semibold text-slate-700 text-[11px]">
-                  Demo Admin Credentials
+            {/* Role Tab Switcher */}
+            <div className="flex items-center p-1 bg-slate-100 rounded-2xl mb-5 border border-slate-200">
+              <button
+                type="button"
+                onClick={() => handleTabSwitch('MEMBER')}
+                className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  activeTab === 'MEMBER'
+                    ? 'bg-white text-finance-900 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-900'
+                }`}
+              >
+                <User className="w-3.5 h-3.5" />
+                <span>Member Portal</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleTabSwitch('ADMIN')}
+                className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  activeTab === 'ADMIN'
+                    ? 'bg-gradient-to-r from-purple-900 to-slate-900 text-white shadow-sm'
+                    : 'text-slate-500 hover:text-slate-900'
+                }`}
+              >
+                <Shield className="w-3.5 h-3.5 text-amber-400" />
+                <span>Admin Console</span>
+              </button>
+            </div>
+
+            {/* Quick Demo Credentials Banner */}
+            <div className="mb-4 p-3 rounded-2xl bg-slate-50 border border-slate-200/90 flex items-center justify-between text-xs">
+              <div className="flex flex-col text-left min-w-0 pr-2">
+                <span className="font-bold text-slate-700 text-[11px] flex items-center gap-1">
+                  <Sparkles className="w-3 h-3 text-amber-500 flex-shrink-0" />
+                  <span>{activeTab === 'ADMIN' ? 'Demo Admin Account' : 'Demo Member Account'}</span>
                 </span>
-                <span className="font-mono text-[10px] text-slate-500">
-                  admin@utkalfinance.com / admin123
+                <span className="font-mono text-[10.5px] text-slate-500 truncate mt-0.5">
+                  {activeTab === 'ADMIN'
+                    ? 'admin@utkalfinance.com / admin123'
+                    : '9876543210 / member123'}
                 </span>
               </div>
               <button
                 type="button"
                 onClick={() => {
-                  setIdentifier('admin@utkalfinance.com');
-                  setPassword('admin123');
-                  addToast('Admin credentials auto-filled!', 'info');
+                  if (activeTab === 'ADMIN') {
+                    setIdentifier('admin@utkalfinance.com');
+                    setPassword('admin123');
+                  } else {
+                    setIdentifier('9876543210');
+                    setPassword('member123');
+                  }
+                  addToast('Demo credentials filled', 'info');
                 }}
-                className="px-2 py-1 rounded-lg bg-finance-600 hover:bg-finance-700 text-white font-bold text-[10px] transition-colors"
+                className={`px-2.5 py-1 rounded-xl text-white font-bold text-[10px] transition-colors flex-shrink-0 cursor-pointer shadow-2xs ${
+                  activeTab === 'ADMIN'
+                    ? 'bg-purple-600 hover:bg-purple-700'
+                    : 'bg-finance-600 hover:bg-finance-700'
+                }`}
               >
-                Reset Demo
+                Auto-fill
               </button>
             </div>
 
             {/* Error Message */}
             {errorMsg && (
-              <div className="mb-4 p-3.5 rounded-xl bg-rose-50 border border-rose-200 flex items-start gap-2.5 text-xs text-rose-700">
+              <div className="mb-4 p-3.5 rounded-2xl bg-rose-50 border border-rose-200 flex items-start gap-2.5 text-xs text-rose-700 animate-in fade-in">
                 <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                <span>{errorMsg}</span>
+                <span className="leading-snug">{errorMsg}</span>
               </div>
             )}
 
             {/* Success Message */}
             {successMsg && (
-              <div className="mb-4 p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 flex items-start gap-2.5 text-xs text-emerald-700">
+              <div className="mb-4 p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-start gap-2.5 text-xs text-emerald-700 animate-in fade-in">
                 <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                <span>{successMsg}</span>
+                <span className="leading-snug">{successMsg}</span>
               </div>
             )}
 
             {/* Login Form */}
             <form onSubmit={handleLoginSubmit} className="space-y-4">
               <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-xs font-bold text-slate-700">
-                    Admin Email / Username
-                  </label>
-                </div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  {activeTab === 'ADMIN'
+                    ? 'Admin Username or Official Email'
+                    : 'Mobile Number, EMP ID, or Email'}
+                </label>
                 <div className="relative">
                   <input
                     type="text"
                     required
                     value={identifier}
                     onChange={(e) => setIdentifier(e.target.value)}
-                    placeholder="admin@utkalfinance.com"
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-finance-600 bg-slate-50/50 focus:bg-white transition-all pl-10"
+                    placeholder={
+                      activeTab === 'ADMIN'
+                        ? 'admin@utkalfinance.com'
+                        : 'e.g. 9876543210 or UF-2026-1048'
+                    }
+                    className={`w-full px-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 bg-slate-50/50 focus:bg-white transition-all pl-10 ${
+                      activeTab === 'ADMIN'
+                        ? 'focus:ring-purple-600'
+                        : 'focus:ring-finance-600'
+                    }`}
                   />
-                  <Shield className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5 pointer-events-none" />
+                  {activeTab === 'ADMIN' ? (
+                    <Shield className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5 pointer-events-none" />
+                  ) : (
+                    <Smartphone className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5 pointer-events-none" />
+                  )}
                 </div>
               </div>
 
@@ -156,7 +262,9 @@ const LoginPage = ({ onNavigate }) => {
                   <button
                     type="button"
                     onClick={() => setForgotModalOpen(true)}
-                    className="text-xs font-semibold text-finance-600 hover:text-finance-800 transition-colors"
+                    className={`text-xs font-semibold hover:underline transition-colors ${
+                      activeTab === 'ADMIN' ? 'text-purple-600' : 'text-finance-600'
+                    }`}
                   >
                     Forgot Password?
                   </button>
@@ -167,8 +275,12 @@ const LoginPage = ({ onNavigate }) => {
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter admin password"
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-finance-600 bg-slate-50/50 focus:bg-white transition-all pl-10 pr-10"
+                    placeholder="Enter your password"
+                    className={`w-full px-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 bg-slate-50/50 focus:bg-white transition-all pl-10 pr-10 ${
+                      activeTab === 'ADMIN'
+                        ? 'focus:ring-purple-600'
+                        : 'focus:ring-finance-600'
+                    }`}
                   />
                   <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5 pointer-events-none" />
                   <button
@@ -189,7 +301,7 @@ const LoginPage = ({ onNavigate }) => {
                     onChange={(e) => setRememberMe(e.target.checked)}
                     className="w-4 h-4 rounded border-slate-300 text-finance-600 focus:ring-finance-600"
                   />
-                  <span>Remember this terminal</span>
+                  <span>Remember this device</span>
                 </label>
                 <span className="text-slate-400 text-[11px]">256-Bit SSL Encrypted</span>
               </div>
@@ -197,7 +309,11 @@ const LoginPage = ({ onNavigate }) => {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-3.5 rounded-xl bg-finance-900 hover:bg-finance-800 text-white font-bold text-sm tracking-wide transition-all shadow-md flex items-center justify-center gap-2"
+                className={`w-full py-3.5 rounded-xl text-white font-bold text-sm tracking-wide transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 cursor-pointer ${
+                  activeTab === 'ADMIN'
+                    ? 'bg-gradient-to-r from-purple-900 via-slate-900 to-finance-950 hover:from-purple-800 hover:to-slate-800'
+                    : 'bg-finance-900 hover:bg-finance-800'
+                }`}
               >
                 {isLoading ? (
                   <span className="inline-flex items-center gap-2">
@@ -206,43 +322,64 @@ const LoginPage = ({ onNavigate }) => {
                   </span>
                 ) : (
                   <>
-                    <span>Sign In to Admin Console</span>
+                    <span>Sign In to {activeTab === 'ADMIN' ? 'Admin Console' : 'Member Portal'}</span>
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}
               </button>
             </form>
 
-            {/* Quick 1-Click Demo Login Panel */}
+            {/* Quick 1-Click Evaluation Login */}
             <div className="mt-6 pt-5 border-t border-slate-200">
-              <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider text-center mb-3">
-                Quick 1-Click Evaluation Login
+              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center mb-2.5">
+                Instant 1-Click Evaluation
               </div>
               <button
                 type="button"
-                onClick={handleQuickDemoLogin}
-                className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-emerald-50/50 hover:border-emerald-300 text-left transition-all group flex items-center justify-between"
+                onClick={() => handleQuickDemoLogin(activeTab)}
+                className="w-full p-3 rounded-2xl border border-slate-200/90 bg-slate-50 hover:bg-emerald-50/50 hover:border-emerald-300 text-left transition-all group flex items-center justify-between cursor-pointer"
               >
                 <div>
                   <div className="text-xs font-bold text-slate-900 group-hover:text-emerald-700 flex items-center gap-1.5">
-                    <Shield className="w-3.5 h-3.5 text-emerald-600" /> Admin Demo Console
+                    {activeTab === 'ADMIN' ? (
+                      <>
+                        <Shield className="w-3.5 h-3.5 text-purple-600" />
+                        <span>Admin Console Demo</span>
+                      </>
+                    ) : (
+                      <>
+                        <User className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Verified Member Demo</span>
+                      </>
+                    )}
                   </div>
-                  <div className="text-[10px] text-slate-500 mt-0.5">Operations Head Desk &bull; Executive Controls</div>
+                  <div className="text-[10.5px] text-slate-500 mt-0.5">
+                    {activeTab === 'ADMIN'
+                      ? 'Operations Head Desk • Executive Governance'
+                      : 'Rajesh Sharma • Savings, FDs, Loans & Passbook'}
+                  </div>
                 </div>
-                <span className="text-[10px] font-bold px-2 py-1 rounded-md bg-emerald-100 text-emerald-800">
-                  1-Click Login &rarr;
+                <span className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800 flex-shrink-0">
+                  1-Click &rarr;
                 </span>
               </button>
             </div>
           </div>
 
-          {/* Footer Navigation Link */}
-          <div className="bg-slate-50 p-4 border-t border-slate-100 text-center text-xs text-slate-600 flex flex-wrap items-center justify-center gap-2">
-            <span>Restricted Administrator Access</span>
+          {/* Card Bottom Link */}
+          <div className="bg-slate-50 p-4 border-t border-slate-100 text-center text-xs text-slate-600 flex items-center justify-center gap-3">
+            <button
+              type="button"
+              onClick={() => onNavigate('register')}
+              className="font-bold text-finance-600 hover:text-finance-800 hover:underline transition-colors cursor-pointer"
+            >
+              New Member? Register Here
+            </button>
             <span className="text-slate-300">&bull;</span>
             <button
+              type="button"
               onClick={() => onNavigate('home')}
-              className="font-bold text-finance-600 hover:text-finance-800 underline transition-colors"
+              className="font-bold text-slate-600 hover:text-slate-900 hover:underline transition-colors cursor-pointer"
             >
               Return to Website
             </button>
@@ -250,48 +387,50 @@ const LoginPage = ({ onNavigate }) => {
         </div>
       </div>
 
-      {/* Simple Footer */}
-      <div className="py-4 text-center text-xs text-slate-500">
-        &copy; {new Date().getFullYear()} Utkal Finance Limited. Regulated by Reserve Bank of India.
+      {/* Page Footer */}
+      <div className="py-4 text-center text-xs text-slate-500 border-t border-slate-200/60 bg-white">
+        &copy; {new Date().getFullYear()} New Utkal Finance Limited. Reg. No.: U64199OD2026PLC054968. Certified by Govt. of India.
       </div>
 
       {/* Forgot Password Modal */}
       <Modal
         isOpen={forgotModalOpen}
         onClose={() => setForgotModalOpen(false)}
-        title="Reset Your Account Password"
-        subtitle="Provide your registered email address or Member ID to receive a secure recovery code."
+        title={activeTab === 'ADMIN' ? 'Reset Administrator Password' : 'Reset Member Password'}
+        subtitle="Provide your registered email address or mobile number to receive a secure recovery code."
       >
         <form onSubmit={handleForgotSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">Registered Email Address *</label>
+            <label className="block text-xs font-bold text-slate-700 mb-1">
+              Registered Email or Mobile *
+            </label>
             <input
-              type="email"
+              type="text"
               required
               value={forgotEmail}
               onChange={(e) => setForgotEmail(e.target.value)}
-              placeholder="e.g. rajesh.sharma@utkalfinance.com"
+              placeholder="e.g. member@utkalfinance.com or 9876543210"
               className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-finance-600"
             />
           </div>
           <p className="text-xs text-slate-500 leading-relaxed">
-            An encrypted one-time password (OTP) and password reset token will be dispatched to your registered email and mobile number.
+            A secure recovery verification code and temporary login token will be dispatched to your authorized contact details.
           </p>
           <div className="flex justify-end gap-2 pt-2">
             <button
               type="button"
               onClick={() => setForgotModalOpen(false)}
-              className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+              className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={forgotSubmitted}
-              className="px-5 py-2 rounded-xl bg-finance-900 text-white text-xs font-bold tracking-wide uppercase hover:bg-finance-800 flex items-center gap-1.5"
+              className="px-5 py-2 rounded-xl bg-finance-900 text-white text-xs font-bold tracking-wide uppercase hover:bg-finance-800 flex items-center gap-1.5 cursor-pointer"
             >
               <KeyRound className="w-3.5 h-3.5" />
-              <span>{forgotSubmitted ? 'Sending Link...' : 'Dispatch Reset OTP'}</span>
+              <span>{forgotSubmitted ? 'Sending Code...' : 'Dispatch Reset OTP'}</span>
             </button>
           </div>
         </form>

@@ -75,6 +75,17 @@ export async function handleApiRequest(req, res) {
   const method = req.method.toUpperCase();
 
   try {
+    // Health Check & Status
+    if ((pathname === '/api/health' || pathname === '/api/status') && method === 'GET') {
+      return sendJson(res, 200, {
+        success: true,
+        status: 'ONLINE',
+        timestamp: new Date().toISOString(),
+        institution: 'New Utkal Finance Limited',
+        regNo: 'U64199OD2026PLC054968'
+      });
+    }
+
     // -------------------------------------------------------------
     // AUTHENTICATION ROUTES
     // -------------------------------------------------------------

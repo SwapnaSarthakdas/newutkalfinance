@@ -1172,10 +1172,10 @@ const RegisterPage = ({ onNavigate }) => {
             </button>
 
             <button
-              onClick={() => onNavigate('login')}
-              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold transition-colors border border-slate-200"
+              onClick={() => onNavigate('admin-login')}
+              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold transition-colors border border-slate-200 cursor-pointer"
             >
-              <span>Already Registered? Sign In</span>
+              <span>Admin Portal</span>
             </button>
           </div>
         </div>

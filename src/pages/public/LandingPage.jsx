@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ShieldCheck,
   TrendingUp,
@@ -10,6 +10,7 @@ import {
   Lock,
   ArrowRight,
   ChevronRight,
+  ChevronLeft,
   Award,
   Users,
   PhoneCall,
@@ -18,383 +19,528 @@ import {
   Send,
   Zap,
   FileText,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Smartphone,
+  Gift,
+  Calculator,
+  Percent,
+  Briefcase,
+  Layers,
+  Sparkles,
+  ExternalLink,
+  ChevronDown,
+  Building,
+  HelpCircle
 } from 'lucide-react';
 import Footer from '../../components/common/Footer';
-import { calculateEMI, calculateFDReturns } from '../../utils/calculators';
+import { calculateEMI, calculateFDReturns, calculateRDReturns } from '../../utils/calculators';
 import { formatINR } from '../../utils/formatters';
 import { useFinance } from '../../context/FinanceContext';
 
 const LandingPage = ({ onNavigate }) => {
   const { addToast } = useFinance();
 
-  // EMI Calculator State
-  const [loanAmount, setLoanAmount] = useState(500000);
-  const [loanTenure, setLoanTenure] = useState(36); // months
-  const [loanRate, setLoanRate] = useState(10.5);
+  // =========================================================================
+  // 1. FINANCIAL CALCULATOR SUITE STATE (Utkarsh Bank Style)
+  // =========================================================================
+  const [calcTab, setCalcTab] = useState('home-loan'); // 'home-loan' | 'personal-loan' | 'fd' | 'gold-loan'
 
-  // FD Calculator State
-  const [fdAmount, setFdAmount] = useState(200000);
+  // Home Loan & Business Loan State
+  const [loanAmount, setLoanAmount] = useState(2500000);
+  const [loanTenure, setLoanTenure] = useState(180); // months (15 yrs)
+  const [loanRate, setLoanRate] = useState(8.75);
+
+  // Personal Loan State
+  const [plAmount, setPlAmount] = useState(300000);
+  const [plTenure, setPlTenure] = useState(36); // months
+  const [plRate, setPlRate] = useState(11.5);
+
+  // FD State
+  const [fdAmount, setFdAmount] = useState(300000);
   const [fdTenure, setFdTenure] = useState(3); // years
-  const [fdRate, setFdRate] = useState(7.75);
+  const [fdRate, setFdRate] = useState(8.25);
+  const [isSeniorCitizen, setIsSeniorCitizen] = useState(false);
 
-  // Calculator Tab
-  const [calcTab, setCalcTab] = useState('loan'); // 'loan' | 'fd'
+  // Gold Loan State
+  const [goldGrams, setGoldGrams] = useState(40); // grams
+  const [goldPurity, setGoldPurity] = useState(22); // 22K or 24K
+  const goldRatePerGram = goldPurity === 22 ? 6250 : 6800;
+  const estimatedGoldLoan = Math.round(goldGrams * goldRatePerGram * 0.75); // 75% LTV
 
-  // Contact form state
+  // Computed results
+  const homeLoanResult = calculateEMI(loanAmount, loanRate, loanTenure);
+  const personalLoanResult = calculateEMI(plAmount, plRate, plTenure);
+  const actualFdRate = isSeniorCitizen ? fdRate + 0.25 : fdRate;
+  const fdResult = calculateFDReturns(fdAmount, actualFdRate, fdTenure);
+
+  // =========================================================================
+  // 2. HERO CAROUSEL STATE
+  // =========================================================================
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [isCarouselPaused, setIsCarouselPaused] = useState(false);
+
+  const heroSlides = [
+    {
+      id: 'fd-rate',
+      tag: 'Special Festive Interest Rates',
+      tagColor: 'bg-amber-400/20 text-amber-300 border-amber-400/30',
+      title: 'Secure Your Future with High-Yield Fixed Deposits',
+      subtitle: 'Earn up to 8.25%* p.a. on Fixed Deposits & 8.50%* p.a. for Senior Citizens. Safe compounding with quarterly interest payout directly to your account.',
+      badge: 'DICGC Insured & Regulated',
+      primaryBtnText: 'Calculate Returns',
+      primaryAction: () => {
+        setCalcTab('fd');
+        const el = document.getElementById('calculator-section');
+        if (el) el.scrollIntoView({ behavior: 'smooth' });
+      },
+      secondaryBtnText: 'Open FD Account',
+      secondaryAction: () => onNavigate('register'),
+      stats: [
+        { label: 'General Rate', val: '8.25% p.a.' },
+        { label: 'Senior Citizens', val: '8.50% p.a.' },
+        { label: 'Tenure', val: '7 Days - 10 Yrs' }
+      ],
+      gradient: 'from-[#0B1528] via-[#1A2340] to-[#2A164D]'
+    },
+    {
+      id: 'savings-acc',
+      tag: 'Zero Balance & Digital Passbook',
+      tagColor: 'bg-emerald-400/20 text-emerald-300 border-emerald-400/30',
+      title: 'Make Life Easier with Digital Savings Accounts',
+      subtitle: 'Open an Instant High-Interest Savings Account with up to 7.50%* returns credited quarterly. Complete zero-balance facility with instant digital passbook and member portal access.',
+      badge: '100% Paperless Opening',
+      primaryBtnText: 'Open Account Online',
+      primaryAction: () => onNavigate('register'),
+      secondaryBtnText: 'Download Blank Form',
+      secondaryAction: () => onNavigate('membership-form'),
+      stats: [
+        { label: 'Savings Yield', val: 'Up to 7.50%*' },
+        { label: 'Min. Balance', val: '₹0 (Zero)' },
+        { label: 'Passbook', val: 'Digital Passbook' }
+      ],
+      gradient: 'from-[#111827] via-[#0D2447] to-[#1E1B4B]'
+    },
+    {
+      id: 'loans',
+      tag: 'Fast-Track Credit Solutions',
+      tagColor: 'bg-blue-400/20 text-blue-300 border-blue-400/30',
+      title: 'Turn Your Ambitions Into Reality with Low EMI Loans',
+      subtitle: 'Fast-track MSME Business Loans, Home Loans & Gold Loans up to ₹10 Crores. Minimal paperwork, transparent underwriting, and disbursal within 24 to 48 hours.',
+      badge: 'Zero Hidden Processing Fees',
+      primaryBtnText: 'Apply For Loan',
+      primaryAction: () => onNavigate('register'),
+      secondaryBtnText: 'Calculate EMI',
+      secondaryAction: () => {
+        setCalcTab('home-loan');
+        const el = document.getElementById('calculator-section');
+        if (el) el.scrollIntoView({ behavior: 'smooth' });
+      },
+      stats: [
+        { label: 'Loan Limit', val: 'Up to ₹10 Cr' },
+        { label: 'EMI Starts', val: '₹740 / Lakh' },
+        { label: 'Disbursal', val: '24-48 Hours' }
+      ],
+      gradient: 'from-[#1A102F] via-[#241744] to-[#0A2540]'
+    },
+    {
+      id: 'digital-banking',
+      tag: 'Next-Gen Banking Experience',
+      tagColor: 'bg-purple-400/20 text-purple-300 border-purple-400/30',
+      title: 'Utkal Digital & WhatsApp Banking at Your Fingertips',
+      subtitle: 'Experience 24/7 financial control. Check account balances, transfer funds via UPI, pay bills via Bharat Connect, and get instant receipts on WhatsApp.',
+      badge: '256-Bit Bank Encryption',
+      primaryBtnText: 'WhatsApp Banking',
+      primaryAction: () => window.open('https://wa.me/919776175240?text=Hi%2C%20Utkal%20Finance', '_blank'),
+      secondaryBtnText: 'Member Portal Login',
+      secondaryAction: () => onNavigate('login'),
+      stats: [
+        { label: 'Availability', val: '24 x 7 x 365' },
+        { label: 'WhatsApp Desk', val: '+91 9776175240' },
+        { label: 'Security', val: 'SHA-256 SSL' }
+      ],
+      gradient: 'from-[#2A0845] via-[#1B1464] to-[#0B1528]'
+    }
+  ];
+
+  // Auto slide interval
+  useEffect(() => {
+    if (isCarouselPaused) return;
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
+    }, 6500);
+    return () => clearInterval(timer);
+  }, [isCarouselPaused, heroSlides.length]);
+
+  const handlePrevSlide = () => {
+    setCurrentSlide((prev) => (prev - 1 + heroSlides.length) % heroSlides.length);
+  };
+
+  const handleNextSlide = () => {
+    setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
+  };
+
+
+
+  // =========================================================================
+  // 3. CONTACT / INQUIRY FORM STATE
+  // =========================================================================
   const [contactForm, setContactForm] = useState({
     name: '',
     phone: '',
     email: '',
-    service: 'Loans',
+    service: 'Home Loan',
     message: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const emiCalcResult = calculateEMI(loanAmount, loanRate, loanTenure);
-  const fdCalcResult = calculateFDReturns(fdAmount, fdRate, fdTenure);
-
   const handleContactSubmit = (e) => {
     e.preventDefault();
     if (!contactForm.name || !contactForm.phone) {
-      addToast('Please provide your name and contact number.', 'warning');
+      addToast('Please provide your name and contact phone number.', 'warning');
       return;
     }
     setIsSubmitting(true);
     setTimeout(() => {
       setIsSubmitting(false);
-      addToast('Thank you! Our financial advisor will contact you within 2 business hours.', 'success');
-      setContactForm({ name: '', phone: '', email: '', service: 'Loans', message: '' });
+      addToast('Thank you! Our branch financial advisor will contact you within 2 business hours.', 'success');
+      setContactForm({ name: '', phone: '', email: '', service: 'Home Loan', message: '' });
     }, 800);
   };
 
-  const services = [
+  // =========================================================================
+  // 4. UTKARSH 4-CARD PRODUCTS DATA
+  // =========================================================================
+  const bankingProducts = [
     {
-      title: 'Savings Accounts',
-      desc: 'High-yield member savings accounts with attractive interest rates, digital passbooks, and round-the-clock liquidity.',
+      title: 'Savings Account',
+      tagline: 'Earn up to 7.50%* on your Savings Account and get interest credited quarterly.',
       icon: PiggyBank,
-      color: 'from-emerald-500/10 to-teal-500/10 text-emerald-600',
-      badge: 'Up to 5.5% p.a.'
+      color: 'from-blue-600 to-indigo-700',
+      rate: 'Up to 7.50%*',
+      features: ['Zero Balance BSBDA Available', 'Instant Digital Passbook', 'Unlimited UPI & ATM Usage', 'Quarterly Interest Payout'],
+      badge: 'High Liquidity',
+      actionText: 'Open Savings Account',
+      actionRoute: 'register'
     },
     {
-      title: 'Credit & Loans',
-      desc: 'Transparent personal, business, gold, and home loans with rapid approval, zero hidden charges, and flexible EMIs.',
-      icon: CreditCard,
-      color: 'from-finance-600/15 to-finance-800/15 text-finance-600',
-      badge: 'From 8.4% p.a.'
-    },
-    {
-      title: 'Term & Recurring Deposits',
-      desc: 'Fixed Deposits and Recurring Deposits designed to compound your wealth safely with guaranteed returns.',
+      title: 'Deposits (FD & RD)',
+      tagline: 'Earn interest rates up to 8.25%* p.a. and 8.50%* p.a. for Senior Citizens.',
       icon: TrendingUp,
-      color: 'from-amber-500/10 to-orange-500/10 text-amber-600',
-      badge: 'Up to 8.25% p.a.'
+      color: 'from-amber-600 to-orange-700',
+      rate: 'Up to 8.25%*',
+      features: ['Safe DICGC Insurance Cover', 'Compounded Quarterly Returns', 'Tenures from 7 Days to 10 Yrs', 'Tax Saver 80C Options'],
+      badge: 'Guaranteed Returns',
+      actionText: 'Book Fixed Deposit',
+      actionRoute: 'calculator'
     },
     {
-      title: 'Financial Planning',
-      desc: 'Comprehensive wealth preservation and strategic advisory tailored for retail investors and small businesses.',
+      title: 'Loans & Advances',
+      tagline: 'Get Loan amount up to ₹10 Crores with flexible tenure up to 15 years.',
+      icon: CreditCard,
+      color: 'from-purple-600 to-violet-800',
+      rate: 'From 8.4% p.a.',
+      features: ['Home Loan & Griha Sudhar', 'MSME Working Capital', 'Instant Gold Loan Valuation', 'Minimal KYC Documentation'],
+      badge: 'Quick Approval',
+      actionText: 'Apply For Loan',
+      actionRoute: 'calculator'
+    },
+    {
+      title: 'Insurance & Investments',
+      tagline: 'Turn your surplus funds into security for a better and confident tomorrow.',
       icon: Wallet,
-      color: 'from-purple-500/10 to-pink-500/10 text-purple-600',
-      badge: 'Advisory Desk'
-    },
-    {
-      title: 'Account Management',
-      desc: 'Self-service digital portal for instant KYC updates, nominee registrations, account statements, and tax proofs.',
-      icon: FileText,
-      color: 'from-finance-600/15 to-finance-700/15 text-finance-700',
-      badge: '100% Digital'
-    },
-    {
-      title: 'Transaction Management',
-      desc: 'Real-time fund transfers, auto-debit NACH mandates, UPI integrations, and detailed downloadable audit trails.',
-      icon: Zap,
-      color: 'from-rose-500/10 to-red-500/10 text-rose-600',
-      badge: 'Instant Settlement'
+      color: 'from-emerald-600 to-teal-800',
+      rate: 'Protection + Growth',
+      features: ['Family Term Life Insurance', 'Cashless Health Hospitalisation', 'Atal Pension Yojana (APY)', 'Dedicated Advisory Desk'],
+      badge: 'Family Security',
+      actionText: 'Explore Coverage',
+      actionRoute: 'services'
     }
   ];
 
-  const whyChooseUs = [
+
+  // Financial literacy insights / blogs
+  const financialBlogs = [
     {
-      title: 'Secure & Regulated',
-      desc: 'Governed by RBI NBFC regulations and backed by 256-bit bank-grade encryption across all financial transactions.',
-      icon: Lock,
-      highlight: 'RBI Regulated'
+      title: 'Zero Balance vs Regular Savings Account: Complete Comparison 2026',
+      desc: 'Understand key differences in average monthly balance requirements, interest credit cycles, and digital benefits.',
+      date: 'Aug 2026',
+      readTime: '4 min read'
     },
     {
-      title: 'Complete Transparency',
-      desc: 'Zero hidden processing fees, no surprise foreclosure penalties, and crystal-clear amortization schedules.',
-      icon: CheckCircle2,
-      highlight: 'Zero Hidden Fees'
+      title: 'Senior Citizen Fixed Deposit Guide: Maximize Returns with Safe Compounding',
+      desc: 'How retirees can benefit from additional 0.50% interest bonus and monthly interest payout schemes.',
+      date: 'Aug 2026',
+      readTime: '5 min read'
     },
     {
-      title: 'Fast Processing',
-      desc: 'Digital document verification and automated risk modeling enable loan disbursals in as fast as 24 to 48 hours.',
-      icon: Clock,
-      highlight: '24-48h Disbursal'
+      title: 'MSME Business Loan Eligibility: Steps to Fast-Track Your Working Capital',
+      desc: 'A step-by-step checklist of GST records, projected turnover, and collateral-free loan solutions in Odisha.',
+      date: 'Sep 2026',
+      readTime: '6 min read'
     },
     {
-      title: 'Trusted Management',
-      desc: 'Over 12 years of ethical leadership, sound credit governance, and a spotless audit track record in Odisha.',
-      icon: Award,
-      highlight: '12+ Yrs Proven'
-    },
-    {
-      title: 'Digital First Access',
-      desc: 'Complete financial operations from the comfort of your home: check balances, pay EMIs, book FDs, and track dues.',
-      icon: Zap,
-      highlight: 'Anytime Anywhere'
-    },
-    {
-      title: '24/7 Account Access',
-      desc: 'Round-the-clock ledger visibility, instant downloadable statements, and proactive payment notification alerts.',
-      icon: ShieldCheck,
-      highlight: '365 Days Active'
+      title: 'Digital Banking Safety: 10 Golden Rules to Protect Against Cyber Scams',
+      desc: 'Essential security guidelines on OTP verification, UPI PIN confidentiality, and recognizing phishing attempts.',
+      date: 'Sep 2026',
+      readTime: '4 min read'
     }
   ];
+
+  const activeSlide = heroSlides[currentSlide] || heroSlides[0];
 
   return (
-    <div className="flex-1 flex flex-col bg-slate-50">
-      {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-white via-slate-50 to-slate-100 pt-12 pb-20 lg:pt-20 lg:pb-28 border-b border-slate-200">
-        {/* Blurred Banner Background Layer */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden z-0 flex items-center justify-center">
-          <div className="w-full h-full max-w-7xl relative opacity-30 transform scale-110">
-            <img
-              src="/banner.jpg"
-              alt=""
-              className="w-full h-full object-cover md:object-contain filter blur-2xl lg:blur-3xl"
-            />
-          </div>
-          {/* Subtle gradient scrim to maintain pristine text readability */}
-          <div className="absolute inset-0 bg-gradient-to-b from-white/80 via-white/50 to-slate-100/90" />
+    <div className="flex-1 flex flex-col bg-slate-50 overflow-x-hidden">
+      {/* ========================================================================= */}
+      {/* SECTION 1: HIGH-IMPACT HERO BANNER CAROUSEL (Utkarsh Bank Style)           */}
+      {/* ========================================================================= */}
+      <section
+        className="relative overflow-hidden bg-slate-950 text-white select-none"
+        onMouseEnter={() => setIsCarouselPaused(true)}
+        onMouseLeave={() => setIsCarouselPaused(false)}
+      >
+        {/* Background Gradient & Watermark Overlay */}
+        <div className={`absolute inset-0 bg-gradient-to-br ${activeSlide.gradient} opacity-95 transition-all duration-700`} />
+        
+        {/* Subtle blurred banner overlay */}
+        <div className="absolute inset-0 opacity-15 pointer-events-none overflow-hidden">
+          <img src="/banner.jpg" alt="" className="w-full h-full object-cover filter blur-xl scale-110" />
         </div>
 
-        {/* Subtle decorative background shapes */}
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-finance-100/40 rounded-full blur-3xl pointer-events-none z-0" />
-        <div className="absolute top-1/2 -left-40 w-96 h-96 bg-emerald-100/40 rounded-full blur-3xl pointer-events-none z-0" />
-
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-            {/* Left Content */}
-            <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
-              <div className="inline-flex items-center gap-2 px-3 sm:px-3.5 py-1.5 rounded-full bg-finance-50 border border-finance-200 text-finance-800 text-[11px] sm:text-xs font-semibold shadow-xs max-w-full">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping flex-shrink-0"></span>
-                <span className="truncate">Certified by Govt. of India &bull; Reg. No: U64199OD2026PLC054968</span>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-20 lg:py-24 relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+            {/* Left Slide Copy */}
+            <div className="lg:col-span-8 space-y-5 text-center lg:text-left animate-in fade-in duration-500 key={currentSlide}">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider border shadow-xs">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping flex-shrink-0" />
+                <span className={activeSlide.tagColor}>{activeSlide.tag}</span>
               </div>
 
-              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-black tracking-tight leading-[1.15]">
-                Smart Financial Management with{' '}
-                <span className="text-finance-600 block sm:inline">New Utkal Finance</span>
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl 2xl:text-6xl font-black text-white tracking-tight leading-[1.15]">
+                {activeSlide.title}
               </h1>
 
-              <p className="text-sm sm:text-lg text-slate-600 leading-relaxed max-w-2xl mx-auto lg:mx-0">
-                New Utkal Finance Limited delivers secure, certified, and technology-driven banking solutions. Empowering individuals, entrepreneurs, and families with accessible loans, high-yield deposits, and seamless digital account governance.
+              <p className="text-sm sm:text-base lg:text-lg text-slate-200 leading-relaxed max-w-2xl mx-auto lg:mx-0">
+                {activeSlide.subtitle}
               </p>
 
-              {/* CTA Buttons */}
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center lg:justify-start gap-2.5 sm:gap-3 pt-2">
-                <button
-                  onClick={() => onNavigate('register')}
-                  className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-finance-600 hover:bg-finance-700 text-white font-bold text-xs sm:text-sm shadow-md hover:shadow-finance-600/30 transition-all flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <span>Become a Member</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => onNavigate('membership-form')}
-                  className="w-full sm:w-auto px-5 py-3.5 rounded-xl bg-white hover:bg-slate-50 text-[#003E9E] border-2 border-[#003E9E] font-bold text-xs sm:text-sm shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <FileText className="w-4 h-4 text-[#003E9E]" />
-                  <span>Membership Form</span>
-                </button>
-                <button
-                  onClick={() => onNavigate('brochure')}
-                  className="w-full sm:w-auto px-5 py-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <FileSpreadsheet className="w-4 h-4 text-finance-600" />
-                  <span>Brochure</span>
-                </button>
+              {/* Stats Highlights on Slide */}
+              <div className="grid grid-cols-3 gap-3 pt-2 max-w-lg mx-auto lg:mx-0 text-left">
+                {activeSlide.stats.map((st, sIdx) => (
+                  <div key={sIdx} className="p-2.5 sm:p-3 rounded-xl bg-white/10 backdrop-blur-xs border border-white/15">
+                    <div className="text-[10px] sm:text-xs text-slate-300 font-medium">{st.label}</div>
+                    <div className="text-sm sm:text-base font-extrabold text-amber-300 font-mono mt-0.5">{st.val}</div>
+                  </div>
+                ))}
               </div>
 
-              {/* Trust Indicators */}
-              <div className="pt-6 border-t border-slate-200/80 grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 text-left">
-                <div className="p-2 sm:p-0">
-                  <div className="text-xl sm:text-2xl font-bold text-slate-900">₹250+ Cr</div>
-                  <div className="text-[11px] sm:text-xs text-slate-500 font-medium">Assets Managed</div>
-                </div>
-                <div className="p-2 sm:p-0">
-                  <div className="text-xl sm:text-2xl font-bold text-slate-900">15,000+</div>
-                  <div className="text-[11px] sm:text-xs text-slate-500 font-medium">Active Members</div>
-                </div>
-                <div className="p-2 sm:p-0">
-                  <div className="text-xl sm:text-2xl font-bold text-slate-900">99.8%</div>
-                  <div className="text-[11px] sm:text-xs text-slate-500 font-medium">Approval Reliability</div>
-                </div>
-                <div className="p-2 sm:p-0">
-                  <div className="text-xl sm:text-2xl font-bold text-slate-900">12 Hubs</div>
-                  <div className="text-[11px] sm:text-xs text-slate-500 font-medium">Across Odisha</div>
-                </div>
+              {/* Slide Action Buttons */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center lg:justify-start gap-3 pt-4">
+                <button
+                  onClick={activeSlide.primaryAction}
+                  className="px-6 py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs sm:text-sm uppercase tracking-wider shadow-xl shadow-amber-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                >
+                  <span>{activeSlide.primaryBtnText}</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+
+                <button
+                  onClick={activeSlide.secondaryAction}
+                  className="px-5 py-3.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs sm:text-sm uppercase tracking-wider border border-white/25 backdrop-blur-xs transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                >
+                  <span>{activeSlide.secondaryBtnText}</span>
+                  <ChevronRight className="w-4 h-4 text-slate-300" />
+                </button>
               </div>
             </div>
 
-            {/* Right Interactive Card / Preview */}
-            <div className="lg:col-span-5">
-              <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 shadow-2xl border border-slate-200/80 relative">
-                <div className="flex items-center justify-between pb-6 border-b border-slate-100">
-                  <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-xl bg-white border border-slate-200/80 p-0.5 shadow-sm flex items-center justify-center overflow-hidden">
-                      <img src="/logo.jpg" alt="New Utkal Finance" className="w-full h-full object-contain" />
+            {/* Right Card / Interactive Visual */}
+            <div className="lg:col-span-4 hidden lg:block">
+              <div className="bg-white/10 backdrop-blur-md rounded-3xl p-6 border border-white/20 shadow-2xl text-white relative">
+                <div className="flex items-center justify-between pb-4 border-b border-white/10">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-10 h-10 rounded-xl bg-white p-0.5 flex items-center justify-center">
+                      <img src="/logo.jpg" alt="Utkal" className="w-full h-full object-contain" />
                     </div>
                     <div>
-                      <h4 className="font-bold text-slate-900 text-sm">Member Financial Snapshot</h4>
-                      <p className="text-xs text-slate-500">Live Secure Dashboard</p>
+                      <h4 className="font-bold text-sm">New Utkal Finance Limited</h4>
+                      <p className="text-[10px] text-slate-300">Certified by Govt. of India</p>
                     </div>
                   </div>
-                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Online
+                  <span className="text-[10px] font-mono text-amber-300 bg-amber-400/20 px-2 py-0.5 rounded-full font-bold">
+                    ODISHA HQ
                   </span>
                 </div>
 
-                <div className="space-y-4 my-6">
-                  <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 flex items-center justify-between">
-                    <div>
-                      <div className="text-xs text-slate-500 font-medium">Member Balance</div>
-                      <div className="text-2xl font-extrabold text-slate-900 tracking-tight">₹4,85,250</div>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-[11px] font-semibold text-emerald-600 bg-emerald-100/60 px-2 py-0.5 rounded">
-                        +14.2% Growth
-                      </span>
-                      <div className="text-[10px] text-slate-400 mt-1">Verified Member</div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="p-3.5 bg-finance-50/50 rounded-xl border border-finance-100">
-                      <div className="text-[11px] text-finance-800 font-medium">Active Deposits</div>
-                      <div className="text-base font-bold text-slate-900 mt-0.5">₹12,50,000</div>
-                      <div className="text-[10px] text-emerald-600 mt-1">7.75% avg yield</div>
-                    </div>
-                    <div className="p-3.5 bg-amber-50/50 rounded-xl border border-amber-100">
-                      <div className="text-[11px] text-amber-800 font-medium">Next Loan EMI</div>
-                      <div className="text-base font-bold text-slate-900 mt-0.5">₹14,500</div>
-                      <div className="text-[10px] text-amber-700 mt-1">Due 15 Sep 2026</div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
-                  <span className="text-slate-500">Ready to unlock your member benefits?</span>
-                  <button
-                    onClick={() => onNavigate('register')}
-                    className="font-bold text-finance-600 hover:text-finance-800 flex items-center gap-1"
-                  >
-                    Register Now &rarr;
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Official Membership Application Form Spotlight */}
-      <section className="bg-gradient-to-r from-[#001B47] via-[#002766] to-[#001438] text-white py-12 border-b border-[#003E9E]/40 relative overflow-hidden">
-        {/* Ambient subtle glow matching logo colors */}
-        <div className="absolute inset-0 pointer-events-none opacity-20 bg-gradient-to-b from-[#003E9E]/40 to-transparent" />
-        <div className="absolute -top-24 -right-24 w-96 h-96 bg-[#003E9E]/20 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
-            <div className="space-y-3 max-w-2xl text-center lg:text-left">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/15 border border-amber-400/35 text-amber-300 text-xs font-bold uppercase tracking-wider">
-                <ShieldCheck className="w-4 h-4 text-amber-400" />
-                <span>Govt. Certified Application Document</span>
-              </div>
-              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight">
-                Official Membership Application Form
-              </h2>
-              <p className="text-slate-200 text-xs sm:text-sm leading-relaxed">
-                Registered under 2013 &amp; 2014 rules respectively, working on the lines of Nidhi Company. Associate Membership fee of <strong>₹ 200</strong> entitles members to high-yield deposits, credit facilities, and full voting privileges.
-              </p>
-              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 text-xs text-slate-300 font-mono pt-1">
-                <span>Reg. No.: <strong className="text-amber-300 font-bold">U64199OD2026PLC054968</strong></span>
-                <span>&bull;</span>
-                <span>HQ: Bhubaneswar, Odisha</span>
-                <span>&bull;</span>
-                <span>Statutory 2-Page Format</span>
-              </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2.5 sm:gap-3 w-full lg:w-auto">
-              <button
-                onClick={() => onNavigate('membership-form')}
-                className="w-full sm:w-auto px-5 sm:px-6 py-3 sm:py-3.5 rounded-xl bg-[#003E9E] hover:bg-[#002E78] text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-[#003E9E]/30 transition-all flex items-center justify-center gap-2 border border-blue-400/40"
-              >
-                <FileText className="w-4 h-4 text-amber-300" />
-                <span>Blank Statutory Form (PDF)</span>
-              </button>
-              <button
-                onClick={() => onNavigate('register')}
-                className="w-full sm:w-auto px-5 sm:px-6 py-3 sm:py-3.5 rounded-xl bg-white hover:bg-slate-100 text-slate-900 font-bold text-xs uppercase tracking-wider shadow-lg transition-all flex items-center justify-center gap-2 border border-slate-200"
-              >
-                <Users className="w-4 h-4 text-[#003E9E]" />
-                <span>Apply as Member Online</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Services Section */}
-      <section id="services" className="py-20 bg-white border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-3xl mx-auto mb-16">
-            <span className="text-xs uppercase tracking-wider font-bold text-finance-600 bg-finance-50 px-3 py-1 rounded-full border border-finance-100">
-              Complete Financial Portfolio
-            </span>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 mt-3 tracking-tight">
-              Comprehensive Financial Services
-            </h2>
-            <p className="text-slate-600 text-sm sm:text-base mt-3 leading-relaxed">
-              From capital for your entrepreneurial ambitions to high-return fixed deposits that grow your family's future, Utkal Finance offers regulated, dependable products.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {services.map((svc, idx) => {
-              const Icon = svc.icon;
-              return (
-                <div
-                  key={idx}
-                  className="bg-slate-50/70 hover:bg-white rounded-2xl p-7 border border-slate-200/80 hover:border-finance-300 shadow-sm hover:shadow-card-hover transition-all duration-300 group flex flex-col justify-between"
-                >
-                  <div>
-                    <div className="flex items-center justify-between mb-5">
-                      <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${svc.color} flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                        <Icon className="w-6 h-6" />
-                      </div>
-                      <span className="text-[11px] font-bold text-slate-600 bg-white border border-slate-200 px-2.5 py-1 rounded-full shadow-xs">
-                        {svc.badge}
-                      </span>
-                    </div>
-
-                    <h3 className="text-xl font-bold text-slate-900 group-hover:text-finance-600 transition-colors">
-                      {svc.title}
-                    </h3>
-                    <p className="text-slate-600 text-sm mt-2.5 leading-relaxed">
-                      {svc.desc}
+                <div className="py-5 space-y-3">
+                  <div className="bg-black/30 rounded-2xl p-4 border border-white/10">
+                    <span className="text-[11px] text-slate-300">Associate Membership Fee</span>
+                    <div className="text-2xl font-black text-white font-mono mt-0.5">₹ 200 Only</div>
+                    <p className="text-[10px] text-emerald-300 mt-1 flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                      <span>Full voting &amp; high-yield deposit rights</span>
                     </p>
                   </div>
 
-                  <div className="mt-6 pt-4 border-t border-slate-200/60 flex items-center justify-between text-xs">
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="p-3 bg-white/5 rounded-xl border border-white/10">
+                      <span className="text-[10px] text-slate-300 block">Total Capital</span>
+                      <strong className="text-sm font-bold text-amber-300">₹ 250+ Cr</strong>
+                    </div>
+                    <div className="p-3 bg-white/5 rounded-xl border border-white/10">
+                      <span className="text-[10px] text-slate-300 block">Members</span>
+                      <strong className="text-sm font-bold text-emerald-300">15,000+</strong>
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => onNavigate('membership-form')}
+                  className="w-full py-2.5 rounded-xl bg-white text-slate-900 font-bold text-xs uppercase tracking-wider hover:bg-slate-100 transition-colors flex items-center justify-center gap-1.5"
+                >
+                  <FileText className="w-3.5 h-3.5 text-finance-600" />
+                  <span>Download Statutory Form (PDF)</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Carousel Pagination Controls */}
+          <div className="flex items-center justify-between pt-10 border-t border-white/10 mt-10">
+            {/* Dots */}
+            <div className="flex items-center gap-2">
+              {heroSlides.map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setCurrentSlide(idx)}
+                  className={`h-2.5 rounded-full transition-all ${
+                    currentSlide === idx ? 'w-8 bg-amber-400' : 'w-2.5 bg-white/30 hover:bg-white/60'
+                  }`}
+                  aria-label={`Slide ${idx + 1}`}
+                />
+              ))}
+            </div>
+
+            {/* Prev / Next Arrows */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handlePrevSlide}
+                className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 flex items-center justify-center text-white transition-colors"
+                aria-label="Previous Slide"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <button
+                onClick={handleNextSlide}
+                className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 flex items-center justify-center text-white transition-colors"
+                aria-label="Next Slide"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ========================================================================= */}
+      {/* SECTION 2: FLASH NOTIFICATION / MARQUEE BAR (Utkarsh Bank Signature)       */}
+      {/* ========================================================================= */}
+      <section className="w-full bg-[#4A2C7D] text-white py-2 px-3 sm:px-6 shadow-inner flex items-center overflow-hidden border-b border-purple-900 select-none">
+        <div className="flex-shrink-0 flex items-center gap-1.5 bg-amber-400 text-slate-950 font-black px-2.5 py-0.5 rounded text-[10px] sm:text-xs uppercase tracking-wider mr-3 z-10 shadow-sm">
+          <Zap className="w-3 h-3 text-slate-950" />
+          <span>Notice</span>
+        </div>
+        <div className="overflow-hidden whitespace-nowrap flex-1 relative">
+          <div className="animate-marquee text-xs sm:text-sm font-medium text-slate-100">
+            <span className="mx-4">
+              📢 <strong>Revision in Term Deposit Rates:</strong> Earn up to <strong>8.25% p.a.</strong> on Fixed Deposits and <strong>8.50% p.a.</strong> for Senior Citizens w.e.f. Q1 FY 2026-27.
+            </span>
+            <span className="mx-4 text-amber-300">
+              🛡️ <strong>Statutory Membership:</strong> Associate Membership fee of ₹ 200 registered under 2013 &amp; 2014 Rules respectively. Reg. No. U64199OD2026PLC054968.
+            </span>
+            <span className="mx-4 text-emerald-300">
+              🔒 <strong>Cyber Advisory:</strong> Utkal Finance never solicits your confidential OTP, UPI PIN, or netbanking passwords over telephone or SMS.
+            </span>
+            <span className="mx-4">
+              📄 <strong>Form Center:</strong> Download the official 2-Page Membership Application Document online for quick doorstep verification.
+            </span>
+          </div>
+        </div>
+      </section>
+
+      {/* ========================================================================= */}
+      {/* SECTION 3: "MAKE LIFE EASIER WITH NEW AGE BANKING PRODUCTS" (Utkarsh S2)   */}
+      {/* ========================================================================= */}
+      <section id="products-section" className="py-16 sm:py-20 bg-white border-b border-slate-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-3xl mx-auto mb-14">
+            <span className="text-xs uppercase tracking-wider font-extrabold text-finance-600 bg-finance-50 px-3 py-1 rounded-full border border-finance-100">
+              Retail &amp; Institutional Portfolio
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 mt-3 tracking-tight">
+              Make Life Easier with New Age Banking Products
+            </h2>
+            <p className="text-slate-600 text-sm sm:text-base mt-2.5 leading-relaxed">
+              Take a look at what's new right now. Transparent credit, high-yield deposit instruments, and secure digital banking.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
+            {bankingProducts.map((prod, idx) => {
+              const Icon = prod.icon;
+              return (
+                <div
+                  key={idx}
+                  className="bg-slate-50 rounded-2xl sm:rounded-3xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-xl hover:border-finance-300 transition-all duration-300 flex flex-col justify-between group"
+                >
+                  {/* Card Header with Distinctive Gradient & Icon */}
+                  <div className={`p-6 bg-gradient-to-br ${prod.color} text-white relative overflow-hidden`}>
+                    <div className="flex items-center justify-between relative z-10">
+                      <div className="w-12 h-12 rounded-xl bg-white/15 backdrop-blur-xs flex items-center justify-center text-white border border-white/20 group-hover:scale-110 transition-transform">
+                        <Icon className="w-6 h-6" />
+                      </div>
+                      <span className="text-[10px] font-black uppercase tracking-wider bg-white/20 text-white px-2.5 py-1 rounded-full border border-white/30 backdrop-blur-xs">
+                        {prod.badge}
+                      </span>
+                    </div>
+
+                    <h3 className="text-xl font-bold mt-4 relative z-10">{prod.title}</h3>
+                    <div className="text-2xl font-black text-amber-300 font-mono mt-1 relative z-10">
+                      {prod.rate}
+                    </div>
+
+                    {/* Decorative pattern circle */}
+                    <div className="absolute -bottom-8 -right-8 w-28 h-28 bg-white/10 rounded-full blur-xs pointer-events-none" />
+                  </div>
+
+                  {/* Card Body */}
+                  <div className="p-6 flex-1 flex flex-col justify-between space-y-4">
+                    <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                      {prod.tagline}
+                    </p>
+
+                    <div className="space-y-2 pt-2 border-t border-slate-200 text-xs text-slate-700">
+                      {prod.features.map((feat, fIdx) => (
+                        <div key={fIdx} className="flex items-center gap-2">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+                          <span>{feat}</span>
+                        </div>
+                      ))}
+                    </div>
+
                     <button
-                      onClick={() => onNavigate('register')}
-                      className="font-semibold text-finance-600 hover:text-finance-800 flex items-center gap-1"
+                      onClick={() => {
+                        if (prod.actionRoute === 'calculator') {
+                          const el = document.getElementById('calculator-section');
+                          if (el) el.scrollIntoView({ behavior: 'smooth' });
+                        } else {
+                          onNavigate(prod.actionRoute);
+                        }
+                      }}
+                      className="w-full mt-4 py-2.5 rounded-xl bg-white hover:bg-finance-50 text-finance-600 font-bold text-xs border border-finance-200 hover:border-finance-400 transition-all flex items-center justify-center gap-1.5 shadow-2xs group-hover:bg-finance-600 group-hover:text-white"
                     >
-                      Explore &amp; Apply <ChevronRight className="w-3.5 h-3.5" />
+                      <span>{prod.actionText}</span>
+                      <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
                     </button>
-                    <span className="text-slate-400">Instant Digital Flow</span>
                   </div>
                 </div>
               );
@@ -403,185 +549,220 @@ const LandingPage = ({ onNavigate }) => {
         </div>
       </section>
 
-      {/* Interactive Financial Calculator Section */}
-      <section id="calculator" className="py-20 bg-slate-50 border-b border-slate-200">
+      {/* ========================================================================= */}
+      {/* SECTION 4: "COUNT YOUR PATH TO SUCCESS" - CALCULATORS (Utkarsh S3)         */}
+      {/* ========================================================================= */}
+      <section id="calculator-section" className="py-16 sm:py-20 bg-slate-100/70 border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-12">
-            <span className="text-xs uppercase tracking-wider font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">
-              Interactive Tools
+            <span className="text-xs uppercase tracking-wider font-extrabold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+              Interactive Financial Tools
             </span>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 mt-3 tracking-tight">
-              Plan Your Finances Accurately
+            <h2 className="text-3xl sm:text-4xl font-black text-slate-900 mt-3 tracking-tight">
+              Count your path to <span className="text-finance-600">success!</span>
             </h2>
-            <p className="text-slate-600 text-sm sm:text-base mt-3">
-              Calculate exact monthly loan repayments or forecast your deposit returns with zero obligation.
+            <p className="text-slate-600 text-sm sm:text-base mt-2">
+              Plan with accurate bank-grade formulas. Calculate exact monthly EMIs or forecast deposit growth.
             </p>
 
-            {/* Toggle Tabs */}
-            <div className="mt-8 inline-flex p-1 rounded-xl bg-slate-200/80 border border-slate-300">
+            {/* Utkarsh Calculator Tab Switcher */}
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-2 p-1.5 bg-white rounded-2xl border border-slate-300/80 shadow-xs max-w-2xl mx-auto">
               <button
-                onClick={() => setCalcTab('loan')}
-                className={`px-6 py-2.5 rounded-lg text-xs sm:text-sm font-bold transition-all ${
-                  calcTab === 'loan' ? 'bg-white text-finance-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                onClick={() => setCalcTab('home-loan')}
+                className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-1.5 ${
+                  calcTab === 'home-loan'
+                    ? 'bg-finance-600 text-white shadow-md'
+                    : 'text-slate-700 hover:text-finance-600 hover:bg-slate-50'
                 }`}
               >
-                Loan EMI Calculator
+                <Building className="w-4 h-4" />
+                <span>Home Loan</span>
               </button>
+
+              <button
+                onClick={() => setCalcTab('personal-loan')}
+                className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-1.5 ${
+                  calcTab === 'personal-loan'
+                    ? 'bg-finance-600 text-white shadow-md'
+                    : 'text-slate-700 hover:text-finance-600 hover:bg-slate-50'
+                }`}
+              >
+                <Briefcase className="w-4 h-4" />
+                <span>MSME &amp; Personal</span>
+              </button>
+
               <button
                 onClick={() => setCalcTab('fd')}
-                className={`px-6 py-2.5 rounded-lg text-xs sm:text-sm font-bold transition-all ${
-                  calcTab === 'fd' ? 'bg-white text-finance-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-1.5 ${
+                  calcTab === 'fd'
+                    ? 'bg-finance-600 text-white shadow-md'
+                    : 'text-slate-700 hover:text-finance-600 hover:bg-slate-50'
                 }`}
               >
-                Fixed Deposit Calculator
+                <TrendingUp className="w-4 h-4" />
+                <span>FD &amp; RD Returns</span>
+              </button>
+
+              <button
+                onClick={() => setCalcTab('gold-loan')}
+                className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-1.5 ${
+                  calcTab === 'gold-loan'
+                    ? 'bg-finance-600 text-white shadow-md'
+                    : 'text-slate-700 hover:text-finance-600 hover:bg-slate-50'
+                }`}
+              >
+                <Award className="w-4 h-4 text-amber-300" />
+                <span>Gold Loan</span>
               </button>
             </div>
           </div>
 
-          {/* Calculator Card */}
-          <div className="max-w-4xl mx-auto bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 lg:p-10 shadow-card border border-slate-200">
-            {calcTab === 'loan' ? (
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-10 items-center">
-                {/* Sliders Column */}
+          {/* Calculator Card Body */}
+          <div className="max-w-4xl mx-auto bg-white rounded-3xl p-6 sm:p-10 shadow-xl border border-slate-200">
+            {/* TAB 1: HOME LOAN EMI CALCULATOR */}
+            {calcTab === 'home-loan' && (
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-8 lg:gap-12 items-center">
                 <div className="md:col-span-7 space-y-6">
-                  {/* Amount Slider */}
+                  {/* Amount */}
                   <div>
                     <div className="flex justify-between items-center mb-2">
-                      <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">
-                        Loan Amount
+                      <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                        Home Loan Amount
                       </label>
-                      <span className="text-base font-extrabold text-finance-600">
+                      <span className="text-base font-extrabold text-finance-600 font-mono">
                         {formatINR(loanAmount)}
                       </span>
                     </div>
                     <input
                       type="range"
-                      min="50000"
-                      max="5000000"
-                      step="25000"
+                      min="500000"
+                      max="10000000"
+                      step="50000"
                       value={loanAmount}
                       onChange={(e) => setLoanAmount(Number(e.target.value))}
-                      className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-finance-600"
+                      className="w-full h-2.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-finance-600"
                     />
                     <div className="flex justify-between text-[11px] text-slate-400 mt-1 font-medium">
-                      <span>₹50,000</span>
-                      <span>₹25 Lakhs</span>
+                      <span>₹5 Lakhs</span>
                       <span>₹50 Lakhs</span>
+                      <span>₹1 Crore</span>
                     </div>
                   </div>
 
-                  {/* Tenure Slider */}
+                  {/* Tenure */}
                   <div>
                     <div className="flex justify-between items-center mb-2">
-                      <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">
-                        Tenure (Months)
+                      <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                        Tenure (Years / Months)
                       </label>
-                      <span className="text-base font-extrabold text-finance-600">
-                        {loanTenure} Months ({(loanTenure / 12).toFixed(1)} Yrs)
+                      <span className="text-base font-extrabold text-finance-600 font-mono">
+                        {loanTenure / 12} Years ({loanTenure} Mos)
                       </span>
                     </div>
                     <input
                       type="range"
                       min="12"
-                      max="120"
-                      step="6"
+                      max="240"
+                      step="12"
                       value={loanTenure}
                       onChange={(e) => setLoanTenure(Number(e.target.value))}
-                      className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-finance-600"
+                      className="w-full h-2.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-finance-600"
                     />
                     <div className="flex justify-between text-[11px] text-slate-400 mt-1 font-medium">
-                      <span>12 Months</span>
-                      <span>60 Months</span>
-                      <span>120 Months</span>
+                      <span>1 Year</span>
+                      <span>10 Years</span>
+                      <span>20 Years</span>
                     </div>
                   </div>
 
-                  {/* Interest Rate Slider */}
+                  {/* Rate */}
                   <div>
                     <div className="flex justify-between items-center mb-2">
-                      <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">
+                      <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
                         Interest Rate (% p.a.)
                       </label>
-                      <span className="text-base font-extrabold text-finance-600">
+                      <span className="text-base font-extrabold text-finance-600 font-mono">
                         {loanRate}%
                       </span>
                     </div>
                     <input
                       type="range"
-                      min="7.5"
-                      max="18.0"
-                      step="0.25"
+                      min="8.0"
+                      max="15.0"
+                      step="0.1"
                       value={loanRate}
                       onChange={(e) => setLoanRate(Number(e.target.value))}
-                      className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-finance-600"
+                      className="w-full h-2.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-finance-600"
                     />
                     <div className="flex justify-between text-[11px] text-slate-400 mt-1 font-medium">
-                      <span>7.5%</span>
-                      <span>12.0%</span>
-                      <span>18.0%</span>
+                      <span>8.0%</span>
+                      <span>11.5%</span>
+                      <span>15.0%</span>
                     </div>
                   </div>
                 </div>
 
-                {/* Calculation Summary Column */}
-                <div className="md:col-span-5 bg-gradient-to-br from-finance-950 via-finance-900 to-finance-850 rounded-2xl p-5 sm:p-8 text-white flex flex-col justify-between">
+                {/* Readout Column */}
+                <div className="md:col-span-5 bg-gradient-to-br from-[#111827] via-[#0A2540] to-[#001E50] rounded-2xl p-6 sm:p-8 text-white flex flex-col justify-between shadow-lg">
                   <div>
-                    <span className="text-xs uppercase tracking-wider font-semibold text-slate-400">
+                    <span className="text-xs uppercase tracking-wider font-semibold text-slate-300">
                       Calculated Monthly EMI
                     </span>
-                    <div className="text-3xl sm:text-4xl font-extrabold text-white mt-2 tracking-tight">
-                      {formatINR(emiCalcResult.emi)}
+                    <div className="text-3xl sm:text-4xl font-black text-amber-300 font-mono mt-2 tracking-tight">
+                      {formatINR(homeLoanResult.emi)}
                     </div>
                     <p className="text-xs text-slate-400 mt-1">Per month for {loanTenure} installments</p>
                   </div>
 
-                  <div className="my-6 pt-6 border-t border-finance-800 space-y-3 text-xs">
+                  <div className="my-6 pt-5 border-t border-white/15 space-y-2.5 text-xs">
                     <div className="flex justify-between">
-                      <span className="text-slate-400">Principal Amount</span>
-                      <span className="font-semibold text-white">{formatINR(loanAmount)}</span>
+                      <span className="text-slate-300">Principal Amount</span>
+                      <span className="font-semibold text-white font-mono">{formatINR(loanAmount)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-400">Total Interest Payable</span>
-                      <span className="font-semibold text-amber-400">{formatINR(emiCalcResult.totalInterest)}</span>
+                      <span className="text-slate-300">Total Interest</span>
+                      <span className="font-semibold text-amber-300 font-mono">{formatINR(homeLoanResult.totalInterest)}</span>
                     </div>
-                    <div className="flex justify-between pt-2 border-t border-finance-800/80">
-                      <span className="text-slate-300 font-bold">Total Amount Payable</span>
-                      <span className="font-bold text-white">{formatINR(emiCalcResult.totalPayment)}</span>
+                    <div className="flex justify-between pt-2 border-t border-white/10 font-bold">
+                      <span className="text-white">Total Amount Payable</span>
+                      <span className="text-white font-mono">{formatINR(homeLoanResult.totalPayment)}</span>
                     </div>
                   </div>
 
                   <button
                     onClick={() => onNavigate('register')}
-                    className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase tracking-wider transition-all text-center"
+                    className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase tracking-wider transition-all text-center shadow-md cursor-pointer"
                   >
                     Apply for this Loan
                   </button>
                 </div>
               </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-10 items-center">
-                {/* FD Inputs */}
+            )}
+
+            {/* TAB 2: PERSONAL & MSME LOAN */}
+            {calcTab === 'personal-loan' && (
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-8 lg:gap-12 items-center">
                 <div className="md:col-span-7 space-y-6">
                   <div>
                     <div className="flex justify-between items-center mb-2">
-                      <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">
-                        Total Investment Amount
+                      <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                        Personal / MSME Loan Amount
                       </label>
-                      <span className="text-base font-extrabold text-emerald-600">
-                        {formatINR(fdAmount)}
+                      <span className="text-base font-extrabold text-finance-600 font-mono">
+                        {formatINR(plAmount)}
                       </span>
                     </div>
                     <input
                       type="range"
-                      min="10000"
+                      min="50000"
                       max="2000000"
-                      step="10000"
-                      value={fdAmount}
-                      onChange={(e) => setFdAmount(Number(e.target.value))}
-                      className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-emerald-600"
+                      step="25000"
+                      value={plAmount}
+                      onChange={(e) => setPlAmount(Number(e.target.value))}
+                      className="w-full h-2.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-finance-600"
                     />
                     <div className="flex justify-between text-[11px] text-slate-400 mt-1 font-medium">
-                      <span>₹10,000</span>
+                      <span>₹50,000</span>
                       <span>₹10 Lakhs</span>
                       <span>₹20 Lakhs</span>
                     </div>
@@ -589,10 +770,126 @@ const LandingPage = ({ onNavigate }) => {
 
                   <div>
                     <div className="flex justify-between items-center mb-2">
-                      <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">
+                      <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                        Tenure (Months)
+                      </label>
+                      <span className="text-base font-extrabold text-finance-600 font-mono">
+                        {plTenure} Months ({(plTenure / 12).toFixed(1)} Yrs)
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min="12"
+                      max="60"
+                      step="6"
+                      value={plTenure}
+                      onChange={(e) => setPlTenure(Number(e.target.value))}
+                      className="w-full h-2.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-finance-600"
+                    />
+                    <div className="flex justify-between text-[11px] text-slate-400 mt-1 font-medium">
+                      <span>12 Months</span>
+                      <span>36 Months</span>
+                      <span>60 Months</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                        Interest Rate (% p.a.)
+                      </label>
+                      <span className="text-base font-extrabold text-finance-600 font-mono">
+                        {plRate}%
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min="9.5"
+                      max="18.0"
+                      step="0.25"
+                      value={plRate}
+                      onChange={(e) => setPlRate(Number(e.target.value))}
+                      className="w-full h-2.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-finance-600"
+                    />
+                    <div className="flex justify-between text-[11px] text-slate-400 mt-1 font-medium">
+                      <span>9.5%</span>
+                      <span>13.5%</span>
+                      <span>18.0%</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="md:col-span-5 bg-gradient-to-br from-[#241744] to-[#0A2540] rounded-2xl p-6 sm:p-8 text-white flex flex-col justify-between shadow-lg">
+                  <div>
+                    <span className="text-xs uppercase tracking-wider font-semibold text-slate-300">
+                      Calculated Monthly EMI
+                    </span>
+                    <div className="text-3xl sm:text-4xl font-black text-amber-300 font-mono mt-2 tracking-tight">
+                      {formatINR(personalLoanResult.emi)}
+                    </div>
+                    <p className="text-xs text-slate-400 mt-1">Per month for {plTenure} installments</p>
+                  </div>
+
+                  <div className="my-6 pt-5 border-t border-white/15 space-y-2.5 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-slate-300">Principal</span>
+                      <span className="font-semibold text-white font-mono">{formatINR(plAmount)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-300">Total Interest</span>
+                      <span className="font-semibold text-amber-300 font-mono">{formatINR(personalLoanResult.totalInterest)}</span>
+                    </div>
+                    <div className="flex justify-between pt-2 border-t border-white/10 font-bold">
+                      <span className="text-white">Total Payable</span>
+                      <span className="text-white font-mono">{formatINR(personalLoanResult.totalPayment)}</span>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => onNavigate('register')}
+                    className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase tracking-wider transition-all text-center shadow-md cursor-pointer"
+                  >
+                    Apply for this Loan
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* TAB 3: FD & RD MATURITY CALCULATOR */}
+            {calcTab === 'fd' && (
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-8 lg:gap-12 items-center">
+                <div className="md:col-span-7 space-y-6">
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                        Deposit Principal Amount
+                      </label>
+                      <span className="text-base font-extrabold text-emerald-600 font-mono">
+                        {formatINR(fdAmount)}
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min="10000"
+                      max="2500000"
+                      step="10000"
+                      value={fdAmount}
+                      onChange={(e) => setFdAmount(Number(e.target.value))}
+                      className="w-full h-2.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-emerald-600"
+                    />
+                    <div className="flex justify-between text-[11px] text-slate-400 mt-1 font-medium">
+                      <span>₹10,000</span>
+                      <span>₹12.5 Lakhs</span>
+                      <span>₹25 Lakhs</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
                         Tenure (Years)
                       </label>
-                      <span className="text-base font-extrabold text-emerald-600">
+                      <span className="text-base font-extrabold text-emerald-600 font-mono">
                         {fdTenure} {fdTenure === 1 ? 'Year' : 'Years'}
                       </span>
                     </div>
@@ -603,7 +900,7 @@ const LandingPage = ({ onNavigate }) => {
                       step="1"
                       value={fdTenure}
                       onChange={(e) => setFdTenure(Number(e.target.value))}
-                      className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-emerald-600"
+                      className="w-full h-2.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-emerald-600"
                     />
                     <div className="flex justify-between text-[11px] text-slate-400 mt-1 font-medium">
                       <span>1 Year</span>
@@ -612,60 +909,144 @@ const LandingPage = ({ onNavigate }) => {
                     </div>
                   </div>
 
-                  <div>
-                    <div className="flex justify-between items-center mb-2">
-                      <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">
-                        Interest Rate (% p.a.)
-                      </label>
-                      <span className="text-base font-extrabold text-emerald-600">
-                        {fdRate}%
-                      </span>
+                  <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200">
+                    <div>
+                      <span className="font-bold text-xs text-slate-900 block">Senior Citizen Bonus (+0.25%)</span>
+                      <span className="text-[11px] text-slate-500">Applicable for investors 60 years and above</span>
                     </div>
                     <input
-                      type="range"
-                      min="5.5"
-                      max="9.0"
-                      step="0.25"
-                      value={fdRate}
-                      onChange={(e) => setFdRate(Number(e.target.value))}
-                      className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-emerald-600"
+                      type="checkbox"
+                      checked={isSeniorCitizen}
+                      onChange={(e) => setIsSeniorCitizen(e.target.checked)}
+                      className="w-5 h-5 accent-emerald-600 cursor-pointer"
                     />
-                    <div className="flex justify-between text-[11px] text-slate-400 mt-1 font-medium">
-                      <span>5.5%</span>
-                      <span>7.5%</span>
-                      <span>9.0%</span>
-                    </div>
                   </div>
                 </div>
 
-                {/* FD Results */}
-                <div className="md:col-span-5 bg-gradient-to-br from-slate-900 via-finance-950 to-slate-950 rounded-2xl p-5 sm:p-8 text-white flex flex-col justify-between">
+                <div className="md:col-span-5 bg-gradient-to-br from-[#064E3B] via-[#065F46] to-[#047857] rounded-2xl p-6 sm:p-8 text-white flex flex-col justify-between shadow-lg">
                   <div>
-                    <span className="text-xs uppercase tracking-wider font-semibold text-emerald-400">
-                      Projected Maturity Value
+                    <span className="text-xs uppercase tracking-wider font-semibold text-emerald-200">
+                      Maturity Value ({actualFdRate}% p.a.)
                     </span>
-                    <div className="text-3xl sm:text-4xl font-extrabold text-white mt-2 tracking-tight">
-                      {formatINR(fdCalcResult.maturityAmount)}
+                    <div className="text-3xl sm:text-4xl font-black text-white font-mono mt-2 tracking-tight">
+                      {formatINR(fdResult.maturityAmount)}
                     </div>
-                    <p className="text-xs text-slate-400 mt-1">Compounded quarterly over {fdTenure} years</p>
+                    <p className="text-xs text-emerald-200 mt-1">Compounded quarterly over {fdTenure} years</p>
                   </div>
 
-                  <div className="my-6 pt-6 border-t border-slate-800 space-y-3 text-xs">
+                  <div className="my-6 pt-5 border-t border-emerald-400/30 space-y-2.5 text-xs">
                     <div className="flex justify-between">
-                      <span className="text-slate-400">Principal Deposit</span>
-                      <span className="font-semibold text-white">{formatINR(fdAmount)}</span>
+                      <span className="text-emerald-200">Total Deposit</span>
+                      <span className="font-semibold text-white font-mono">{formatINR(fdAmount)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-400">Wealth Gained (Interest)</span>
-                      <span className="font-semibold text-emerald-400">{formatINR(fdCalcResult.interestEarned)}</span>
+                      <span className="text-emerald-200">Interest Earned</span>
+                      <span className="font-bold text-amber-300 font-mono">{formatINR(fdResult.interestEarned)}</span>
                     </div>
                   </div>
 
                   <button
                     onClick={() => onNavigate('register')}
-                    className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase tracking-wider transition-all text-center"
+                    className="w-full py-3 rounded-xl bg-white text-emerald-900 font-extrabold text-xs uppercase tracking-wider hover:bg-slate-100 transition-all text-center shadow-md cursor-pointer"
                   >
-                    Open Fixed Deposit
+                    Book Fixed Deposit
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* TAB 4: GOLD LOAN CALCULATOR */}
+            {calcTab === 'gold-loan' && (
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-8 lg:gap-12 items-center">
+                <div className="md:col-span-7 space-y-6">
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                        Gold Weight in Grams (Net)
+                      </label>
+                      <span className="text-base font-extrabold text-amber-600 font-mono">
+                        {goldGrams} Grams
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min="5"
+                      max="250"
+                      step="5"
+                      value={goldGrams}
+                      onChange={(e) => setGoldGrams(Number(e.target.value))}
+                      className="w-full h-2.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-amber-600"
+                    />
+                    <div className="flex justify-between text-[11px] text-slate-400 mt-1 font-medium">
+                      <span>5 g</span>
+                      <span>125 g</span>
+                      <span>250 g</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-2">
+                      Gold Purity Standard
+                    </label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        onClick={() => setGoldPurity(22)}
+                        className={`p-3 rounded-xl border text-xs font-bold transition-all text-left ${
+                          goldPurity === 22
+                            ? 'border-amber-500 bg-amber-50 text-amber-900 shadow-2xs'
+                            : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        <div>22 Karat (91.6%)</div>
+                        <span className="text-[10px] text-slate-500 font-normal">₹6,250 / gram</span>
+                      </button>
+                      <button
+                        onClick={() => setGoldPurity(24)}
+                        className={`p-3 rounded-xl border text-xs font-bold transition-all text-left ${
+                          goldPurity === 24
+                            ? 'border-amber-500 bg-amber-50 text-amber-900 shadow-2xs'
+                            : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        <div>24 Karat (99.9%)</div>
+                        <span className="text-[10px] text-slate-500 font-normal">₹6,800 / gram</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-900">
+                    <p className="font-semibold">Safe &amp; Insured Vault Storage</p>
+                    <span className="text-[11px] text-amber-800">Your gold jewellery is evaluated transparently and stored in high-security biometric bank vaults.</span>
+                  </div>
+                </div>
+
+                <div className="md:col-span-5 bg-gradient-to-br from-[#78350F] via-[#92400E] to-[#B45309] rounded-2xl p-6 sm:p-8 text-white flex flex-col justify-between shadow-lg">
+                  <div>
+                    <span className="text-xs uppercase tracking-wider font-semibold text-amber-200">
+                      Eligible Loan Amount (75% LTV)
+                    </span>
+                    <div className="text-3xl sm:text-4xl font-black text-amber-200 font-mono mt-2 tracking-tight">
+                      {formatINR(estimatedGoldLoan)}
+                    </div>
+                    <p className="text-xs text-amber-100 mt-1">Instant valuation on {goldGrams}g @ {goldPurity}K</p>
+                  </div>
+
+                  <div className="my-6 pt-5 border-t border-amber-400/30 space-y-2.5 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-amber-200">Valuation Rate</span>
+                      <span className="font-semibold text-white font-mono">₹{goldRatePerGram}/g</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-amber-200">Max Disbursal Time</span>
+                      <span className="font-bold text-white">Under 30 Minutes</span>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => onNavigate('register')}
+                    className="w-full py-3 rounded-xl bg-white text-amber-950 font-black text-xs uppercase tracking-wider hover:bg-slate-100 transition-all text-center shadow-md cursor-pointer"
+                  >
+                    Apply for Gold Loan
                   </button>
                 </div>
               </div>
@@ -674,113 +1055,93 @@ const LandingPage = ({ onNavigate }) => {
         </div>
       </section>
 
-      {/* Why Choose Utkal Finance */}
-      <section id="why-us" className="py-20 bg-white border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-3xl mx-auto mb-16">
-            <span className="text-xs uppercase tracking-wider font-bold text-finance-600 bg-finance-50 px-3 py-1 rounded-full border border-finance-100">
-              Institutional Trust
-            </span>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 mt-3 tracking-tight">
-              Why Choose Utkal Finance
-            </h2>
-            <p className="text-slate-600 text-sm sm:text-base mt-3">
-              We combine the warmth and personal accountability of community financial institutions with cutting-edge digital infrastructure.
-            </p>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {whyChooseUs.map((item, idx) => {
-              const Icon = item.icon;
-              return (
-                <div
-                  key={idx}
-                  className="bg-slate-50 rounded-2xl p-7 border border-slate-200/80 hover:border-slate-300 hover:bg-white transition-all shadow-card hover:shadow-card-hover"
-                >
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="w-12 h-12 rounded-xl bg-white border border-slate-200 shadow-xs flex items-center justify-center text-finance-600">
-                      <Icon className="w-6 h-6" />
-                    </div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-md border border-emerald-200">
-                      {item.highlight}
-                    </span>
-                  </div>
-                  <h3 className="text-lg font-bold text-slate-900 mb-2">{item.title}</h3>
-                  <p className="text-slate-600 text-sm leading-relaxed">{item.desc}</p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
 
-      {/* About Us Section */}
-      <section id="about" className="py-20 bg-slate-50 border-b border-slate-200">
+      {/* ========================================================================= */}
+      {/* SECTION 7: STATUTORY GOVERNANCE & MD LEADERSHIP SPOTLIGHT                 */}
+      {/* ========================================================================= */}
+      <section className="py-16 sm:py-20 bg-white border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-            <div className="lg:col-span-6 space-y-6">
-              <span className="text-xs uppercase tracking-wider font-bold text-finance-600 bg-finance-50 px-3 py-1 rounded-full border border-finance-100">
-                About Utkal Finance
-              </span>
-              <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
-                Rooted in Odisha, Empowering Financial Prosperity
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
+            <div className="lg:col-span-7 space-y-6">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-900 text-xs font-bold uppercase tracking-wider">
+                <ShieldCheck className="w-4 h-4 text-amber-600" />
+                <span>Govt. Certified Accreditation</span>
+              </div>
+
+              <h2 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
+                Rooted in Odisha, Built on Ethical Trust &amp; Stability
               </h2>
+
               <p className="text-slate-600 text-sm sm:text-base leading-relaxed">
-                Founded with a mission to eliminate financial friction for hard-working entrepreneurs, professionals, and households across eastern India, Utkal Finance has grown into a highly trusted Category-A Non-Banking Financial Company (NBFC).
-              </p>
-              <p className="text-slate-600 text-sm sm:text-base leading-relaxed">
-                Under the regulatory oversight of the Reserve Bank of India, our institution blends ethical human credit underwriting with secure cloud-native ledger architecture. Every member is treated not merely as an account number, but as an esteemed partner in regional growth.
+                Registered under the provisions of the Companies Act 2013 &amp; 2014 rules respectively, working on the lines of a Nidhi Company. Associate Membership fee of <strong>₹ 200</strong> entitles members to high-yield deposit options, affordable loans, and full institutional participation.
               </p>
 
-              <div className="grid grid-cols-2 gap-4 pt-2">
-                <div className="p-4 bg-white rounded-xl border border-slate-200">
-                  <div className="text-2xl font-black text-finance-600">100%</div>
-                  <div className="text-xs text-slate-600 font-medium mt-0.5">RBI NBFC Compliance</div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 pt-2">
+                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                  <span className="text-[11px] text-slate-500 block">Registration No.</span>
+                  <strong className="text-xs sm:text-sm font-mono text-slate-900 block mt-0.5">U64199OD2026PLC054968</strong>
                 </div>
-                <div className="p-4 bg-white rounded-xl border border-slate-200">
-                  <div className="text-2xl font-black text-emerald-600">4.9 / 5</div>
-                  <div className="text-xs text-slate-600 font-medium mt-0.5">Customer Trust Index</div>
+                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                  <span className="text-[11px] text-slate-500 block">Capital Governance</span>
+                  <strong className="text-xs sm:text-sm font-bold text-finance-600 block mt-0.5">₹ 250+ Cr Assets</strong>
                 </div>
+                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 col-span-2 sm:col-span-1">
+                  <span className="text-[11px] text-slate-500 block">Principal Location</span>
+                  <strong className="text-xs sm:text-sm font-bold text-slate-900 block mt-0.5">Bhubaneswar, Odisha</strong>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2">
+                <button
+                  onClick={() => onNavigate('membership-form')}
+                  className="px-6 py-3 rounded-xl bg-finance-600 hover:bg-finance-700 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-md cursor-pointer"
+                >
+                  <FileText className="w-4 h-4 text-amber-300" />
+                  <span>Statutory Membership Form (PDF)</span>
+                </button>
+                <button
+                  onClick={() => onNavigate('brochure')}
+                  className="px-5 py-3 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <FileSpreadsheet className="w-4 h-4 text-finance-600" />
+                  <span>Corporate Brochure</span>
+                </button>
               </div>
             </div>
 
-            <div className="lg:col-span-6">
-              <div className="bg-gradient-to-br from-finance-900 via-finance-850 to-finance-950 rounded-3xl p-8 text-white shadow-xl relative overflow-hidden">
-                {/* Blurred banner watermark */}
-                <div className="absolute inset-0 pointer-events-none opacity-20 overflow-hidden">
-                  <img src="/banner.jpg" alt="" className="w-full h-full object-cover filter blur-lg scale-125" />
-                </div>
-
-                <div className="space-y-6 relative z-10">
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-semibold">
-                    <ShieldCheck className="w-4 h-4" /> Board Governance Standards
+            {/* Leadership Card Preview */}
+            <div className="lg:col-span-5">
+              <div className="bg-gradient-to-br from-finance-950 via-finance-900 to-finance-850 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
+                <div className="space-y-4 relative z-10">
+                  <div className="flex items-center justify-between pb-3 border-b border-white/10">
+                    <span className="text-xs text-amber-300 font-bold uppercase tracking-wider">Managing Director's Desk</span>
+                    <span className="text-[10px] text-slate-400 font-mono">ODISHA</span>
                   </div>
-                  <h3 className="text-2xl font-bold text-white">
-                    "Our commitment is simple: absolute safety of member deposits and equitable access to productive credit."
-                  </h3>
-                  <div className="pt-4 border-t border-finance-800 space-y-4">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-finance-700 to-finance-950 border-2 border-amber-400 flex items-center justify-center font-black text-amber-300 text-sm shadow-md">
-                        BM
-                      </div>
-                      <div>
-                        <div className="font-bold text-base text-white">Bhagirathi Mohapatra</div>
-                        <div className="text-xs text-amber-300 font-semibold">Managing Director &bull; Newutkal Finance Ltd.</div>
-                        <div className="text-[11px] text-slate-400 font-mono mt-0.5">Govt. Reg. No.: U64199OD2026PLC054968</div>
-                      </div>
-                    </div>
 
-                    {/* Official MD Credentials Badge / Card Preview */}
-                    <div className="rounded-2xl overflow-hidden border border-white/15 bg-white/5 p-2 backdrop-blur-xs shadow-lg">
-                      <img 
-                        src="/managing-director-card.jpg" 
-                        alt="Bhagirathi Mohapatra - Managing Director, Newutkal Finance Limited" 
-                        className="w-full h-auto rounded-xl shadow-xs border border-white/10 object-contain hover:scale-[1.01] transition-transform duration-300"
+                  <blockquote className="text-sm sm:text-base italic text-slate-200 leading-relaxed">
+                    "Our mission is clear: absolute protection of member deposits, complete transparency in credit, and empowering Odisha's local enterprises to thrive."
+                  </blockquote>
+
+                  <div className="pt-3 flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-amber-400 text-slate-950 font-black flex items-center justify-center text-base shadow-md">
+                      BM
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-white text-base">Bhagirathi Mohapatra</h4>
+                      <p className="text-xs text-amber-300 font-semibold">Managing Director &bull; Newutkal Finance Ltd.</p>
+                      <p className="text-[11px] text-slate-400 font-mono">Mobile: +91 9776175240</p>
+                    </div>
+                  </div>
+
+                  {/* Official Card Preview Thumbnail */}
+                  <div className="pt-2">
+                    <div className="rounded-xl overflow-hidden border border-white/15 p-1 bg-white/5">
+                      <img
+                        src="/managing-director-card.jpg"
+                        alt="Bhagirathi Mohapatra - Managing Director"
+                        className="w-full h-auto rounded-lg object-contain"
                       />
-                      <div className="flex items-center justify-between px-2 pt-2 text-[10px] text-slate-300">
-                        <span>Certified By Govt. of India</span>
-                        <span className="font-mono text-amber-300">Mob: +91 9776175240</span>
-                      </div>
                     </div>
                   </div>
                 </div>
@@ -790,74 +1151,120 @@ const LandingPage = ({ onNavigate }) => {
         </div>
       </section>
 
-      {/* Contact Section */}
-      <section id="contact" className="py-20 bg-white">
+      {/* ========================================================================= */}
+      {/* SECTION 8: "RELATED BLOGS & FINANCIAL LITERACY" (Utkarsh Blogs Section)    */}
+      {/* ========================================================================= */}
+      <section className="py-16 sm:py-20 bg-slate-50 border-b border-slate-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-12">
+            <div>
+              <span className="text-xs uppercase tracking-wider font-extrabold text-finance-600 bg-finance-50 px-3 py-1 rounded-full border border-finance-100">
+                Customer Education &amp; Knowledge
+              </span>
+              <h2 className="text-3xl font-black text-slate-900 mt-2 tracking-tight">
+                Related <span className="text-finance-600">Financial Insights</span>
+              </h2>
+            </div>
+            <button
+              onClick={() => onNavigate('about')}
+              className="px-5 py-2.5 rounded-xl border border-slate-300 hover:border-finance-600 text-slate-800 hover:text-finance-600 font-bold text-xs transition-colors flex items-center gap-1.5"
+            >
+              <span>View All Articles</span>
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {financialBlogs.map((b, idx) => (
+              <div
+                key={idx}
+                className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs hover:shadow-lg transition-all duration-300 flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex items-center justify-between text-[11px] text-slate-400 mb-3">
+                    <span>{b.date}</span>
+                    <span>{b.readTime}</span>
+                  </div>
+                  <h4 className="font-bold text-slate-900 text-sm hover:text-finance-600 transition-colors line-clamp-2">
+                    {b.title}
+                  </h4>
+                  <p className="text-xs text-slate-600 mt-2 line-clamp-3 leading-relaxed">
+                    {b.desc}
+                  </p>
+                </div>
+
+                <div className="mt-5 pt-3 border-t border-slate-100">
+                  <button
+                    onClick={() => onNavigate('about')}
+                    className="text-xs font-bold text-finance-600 hover:text-finance-800 flex items-center gap-1"
+                  >
+                    <span>Read Article</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ========================================================================= */}
+      {/* SECTION 9: INQUIRY FORM & CONNECT WITH SPECIALISTS                         */}
+      {/* ========================================================================= */}
+      <section id="contact" className="py-16 sm:py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-            {/* Contact Details */}
+            {/* Left Contact Information */}
             <div className="lg:col-span-5 space-y-6">
-              <span className="text-xs uppercase tracking-wider font-bold text-finance-600 bg-finance-50 px-3 py-1 rounded-full border border-finance-100">
-                Get In Touch
+              <span className="text-xs uppercase tracking-wider font-extrabold text-finance-600 bg-finance-50 px-3 py-1 rounded-full border border-finance-100">
+                Help &amp; Support
               </span>
-              <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">
+              <h2 className="text-3xl font-black text-slate-900 tracking-tight">
                 Connect With Our Financial Specialists
               </h2>
               <p className="text-slate-600 text-sm leading-relaxed">
-                Have questions regarding loan eligibility, fixed deposit interest rates, or opening a new member account? Reach out to our dedicated support team or visit any regional branch.
+                Have questions regarding loan eligibility, fixed deposit interest rates, or opening a new associate member account? Our dedicated advisory desk is here to assist.
               </p>
 
-              <div className="space-y-4 pt-2">
-                <div className="flex items-start gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200/80">
-                  <MapPin className="w-5 h-5 text-finance-600 flex-shrink-0 mt-1" />
+              <div className="space-y-4 pt-2 text-xs">
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-start gap-3.5">
+                  <MapPin className="w-5 h-5 text-finance-600 flex-shrink-0 mt-0.5" />
                   <div>
                     <h5 className="font-bold text-slate-900 text-sm">Principal Headquarters</h5>
-                    <p className="text-xs text-slate-600 mt-0.5">
-                      Plot no-N/5-172, Nayapalli, IRC village, Bhubaneswar-751015
-                    </p>
+                    <p className="text-slate-600 mt-0.5">Plot no-N/5-172, Nayapalli, IRC village, Bhubaneswar-751015, Odisha</p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200/80">
-                  <PhoneCall className="w-5 h-5 text-finance-600 flex-shrink-0" />
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-start gap-3.5">
+                  <PhoneCall className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
                   <div>
-                    <h5 className="font-bold text-slate-900 text-sm">Official Helpline &amp; Mobile</h5>
-                    <p className="text-xs text-slate-600 mt-0.5 font-mono">+91 9776175240 (Mon-Sat, 9:30 AM - 6:30 PM)</p>
+                    <h5 className="font-bold text-slate-900 text-sm">Toll Free &amp; Helpline</h5>
+                    <p className="text-slate-600 mt-0.5 font-mono">1800 123 9878 &bull; +91 9776175240</p>
+                    <span className="text-[10px] text-slate-500">Monday - Saturday (9:30 AM to 6:30 PM)</span>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200/80">
-                  <Mail className="w-5 h-5 text-finance-600 flex-shrink-0" />
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-start gap-3.5">
+                  <Mail className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
                   <div>
-                    <h5 className="font-bold text-slate-900 text-sm">Direct Email &amp; Web</h5>
-                    <p className="text-xs text-slate-600 mt-0.5">bhagirathimohapatra79@gmail.com</p>
+                    <h5 className="font-bold text-slate-900 text-sm">Official Email</h5>
+                    <p className="text-slate-600 mt-0.5">bhagirathimohapatra79@gmail.com</p>
                     <p className="text-[11px] text-finance-600 font-mono">www.newutkalfinance.com</p>
                   </div>
-                </div>
-
-                {/* Managing Director Leadership Badge */}
-                <div className="p-4 rounded-xl bg-gradient-to-r from-finance-50 to-slate-50 border border-finance-200 flex items-center justify-between">
-                  <div>
-                    <span className="text-[10px] uppercase font-bold text-finance-600 block">Executive Leadership</span>
-                    <strong className="text-sm font-bold text-slate-900 block">Bhagirathi Mohapatra</strong>
-                    <span className="text-xs text-slate-500">Managing Director</span>
-                  </div>
-                  <span className="text-[10px] font-mono text-slate-500 bg-white px-2 py-1 rounded border border-slate-200 font-semibold">
-                    Reg: U64199OD2026PLC054968
-                  </span>
                 </div>
               </div>
             </div>
 
-            {/* Inquiry Form */}
+            {/* Right Interactive Inquiry Form */}
             <div className="lg:col-span-7">
               <div className="bg-slate-50 rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm">
-                <h3 className="text-xl font-bold text-slate-900 mb-1">Send an Inquiry</h3>
+                <h3 className="text-xl font-bold text-slate-900 mb-1">Send a Service Inquiry</h3>
                 <p className="text-xs text-slate-500 mb-6">Our advisory desk will get back to you within 2 business hours.</p>
 
-                <form onSubmit={handleContactSubmit} className="space-y-4">
+                <form onSubmit={handleContactSubmit} className="space-y-4 text-xs">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">Your Full Name *</label>
+                      <label className="block font-bold text-slate-700 mb-1">Your Full Name *</label>
                       <input
                         type="text"
                         required
@@ -868,7 +1275,7 @@ const LandingPage = ({ onNavigate }) => {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">Contact Number *</label>
+                      <label className="block font-bold text-slate-700 mb-1">Contact Number *</label>
                       <input
                         type="tel"
                         required
@@ -882,7 +1289,7 @@ const LandingPage = ({ onNavigate }) => {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">Email Address</label>
+                      <label className="block font-bold text-slate-700 mb-1">Email Address</label>
                       <input
                         type="email"
                         value={contactForm.email}
@@ -892,29 +1299,29 @@ const LandingPage = ({ onNavigate }) => {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">Service Required</label>
+                      <label className="block font-bold text-slate-700 mb-1">Select Service</label>
                       <select
                         value={contactForm.service}
                         onChange={(e) => setContactForm({ ...contactForm, service: e.target.value })}
                         className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-finance-600"
                       >
-                        <option value="Personal Loan">Personal Loan</option>
-                        <option value="Home Loan">Home Loan</option>
-                        <option value="SME Business Loan">SME Business Loan</option>
+                        <option value="Home Loan">Home Loan &amp; Griha Sudhar</option>
+                        <option value="MSME Business Loan">MSME Business Loan</option>
+                        <option value="Gold Loan">Gold Loan</option>
                         <option value="Fixed Deposit">Fixed Deposit (FD)</option>
-                        <option value="Recurring Deposit">Recurring Deposit (RD)</option>
-                        <option value="Account Opening">New Member Account Opening</option>
+                        <option value="Savings Account">Zero Balance Savings Account</option>
+                        <option value="Personal Loan">Personal Loan &amp; Advances</option>
                       </select>
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Message / Requirements</label>
+                    <label className="block font-bold text-slate-700 mb-1">Inquiry Details</label>
                     <textarea
                       rows={3}
                       value={contactForm.message}
                       onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
-                      placeholder="Share details regarding loan amount, tenure or specific queries..."
+                      placeholder="Share details regarding loan amount, deposit tenure, or specific queries..."
                       className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-finance-600"
                     />
                   </div>
@@ -922,10 +1329,10 @@ const LandingPage = ({ onNavigate }) => {
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full py-3.5 rounded-xl bg-finance-900 hover:bg-finance-800 text-white font-bold text-sm tracking-wide transition-all shadow-md flex items-center justify-center gap-2"
+                    className="w-full py-3.5 rounded-xl bg-gradient-to-r from-finance-900 to-finance-800 hover:from-finance-800 hover:to-finance-700 text-white font-bold text-sm tracking-wide transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
                   >
                     {isSubmitting ? (
-                      <span>Sending Request...</span>
+                      <span>Submitting Inquiry...</span>
                     ) : (
                       <>
                         <Send className="w-4 h-4" />
@@ -940,6 +1347,7 @@ const LandingPage = ({ onNavigate }) => {
         </div>
       </section>
 
+      {/* Global Bank Footer */}
       <Footer onNavigate={onNavigate} />
     </div>
   );
