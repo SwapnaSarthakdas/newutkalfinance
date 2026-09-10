@@ -662,8 +662,11 @@ const AdminApplications = () => {
                     <span className="font-mono font-bold text-slate-900">{dossierApp.id}</span>
                   </div>
                   <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                    <span className="text-slate-400 font-semibold block text-[10px]">MEMBERSHIP FEE</span>
-                    <span className="font-bold text-emerald-700">₹{dossierApp.membership_fee || 200} ({dossierApp.payment_status || 'Paid'})</span>
+                    <span className="text-slate-400 font-semibold block text-[10px]">MEMBERSHIP FEE &amp; UTR</span>
+                    <span className="font-bold text-emerald-700 block">₹{dossierApp.membership_fee || 200} ({dossierApp.payment_status || 'Pending'})</span>
+                    <span className="font-mono text-[10px] text-slate-500 truncate block">
+                      {dossierApp.payment_method || 'UPI'}: {dossierApp.payment_txn_ref || 'UTR Pending'}
+                    </span>
                   </div>
                   <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
                     <span className="text-slate-400 font-semibold block text-[10px]">SHARE NUMBER</span>
@@ -682,63 +685,86 @@ const AdminApplications = () => {
               <div className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                   <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
-                    <h5 className="font-bold uppercase tracking-wider text-slate-700 text-[11px] mb-2">
+                    <h5 className="font-bold uppercase tracking-wider text-[#003E9E] text-[11px] mb-2">
                       Personal Identity
                     </h5>
                     <div className="flex justify-between py-1 border-b border-slate-200">
                       <span className="text-slate-500">Legal Name</span>
-                      <span className="font-bold text-slate-900">{dossierApp.member?.name || dossierApp.fullName}</span>
+                      <span className="font-bold text-slate-900">
+                        {dossierApp.title || ''} {dossierApp.fullName || dossierApp.member?.name || dossierApp.name}
+                      </span>
                     </div>
                     <div className="flex justify-between py-1 border-b border-slate-200">
                       <span className="text-slate-500">Father / Spouse Name</span>
                       <span className="font-semibold text-slate-800">
-                        {dossierApp.member?.father_or_husband_name || dossierApp.fatherName || 'B. K. Sharma'}
+                        <span className="text-slate-500 font-normal mr-1">({dossierApp.guardianType || dossierApp.member?.guardian_type || 'S/o.'})</span>
+                        {dossierApp.fatherOrHusbandName || dossierApp.member?.father_or_husband_name || dossierApp.father_or_husband_name || 'Not provided'}
                       </span>
                     </div>
                     <div className="flex justify-between py-1 border-b border-slate-200">
                       <span className="text-slate-500">Date of Birth / Age</span>
                       <span className="font-semibold text-slate-800">
-                        {formatDate(dossierApp.member?.dob || dossierApp.dob || '1987-06-14')} ({dossierApp.member?.age || dossierApp.age || 38} Yrs)
+                        {formatDate(dossierApp.dob || dossierApp.member?.dob || '1995-01-01')} ({dossierApp.age || dossierApp.member?.age || 29} Yrs)
                       </span>
                     </div>
                     <div className="flex justify-between py-1 border-b border-slate-200">
                       <span className="text-slate-500">Gender / Marital Status</span>
                       <span className="font-semibold text-slate-800">
-                        {dossierApp.member?.gender || 'Male'} / {dossierApp.member?.marital_status || 'Married'}
+                        {dossierApp.gender || dossierApp.member?.gender || 'Male'} / {dossierApp.maritalStatus || dossierApp.member?.marital_status || 'Married'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-slate-200">
+                      <span className="text-slate-500">Religion / Category</span>
+                      <span className="font-semibold text-slate-800">
+                        {dossierApp.religion || dossierApp.member?.religion || 'Hindu'} / {dossierApp.category || dossierApp.member?.category || 'General'}
                       </span>
                     </div>
                     <div className="flex justify-between py-1">
-                      <span className="text-slate-500">Religion / Category</span>
-                      <span className="font-semibold text-slate-800">
-                        {dossierApp.member?.religion || 'Hindu'} / {dossierApp.member?.category || 'General'}
+                      <span className="text-slate-500">PAN Number</span>
+                      <span className="font-mono font-bold text-slate-900 bg-white border border-slate-200 px-2 py-0.5 rounded">
+                        {dossierApp.panNo || dossierApp.member?.pan_no || 'Not Provided'}
                       </span>
                     </div>
                   </div>
 
                   <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
-                    <h5 className="font-bold uppercase tracking-wider text-slate-700 text-[11px] mb-2">
+                    <h5 className="font-bold uppercase tracking-wider text-[#003E9E] text-[11px] mb-2">
                       Professional &amp; Contact
                     </h5>
                     <div className="flex justify-between py-1 border-b border-slate-200">
                       <span className="text-slate-500">Primary Mobile</span>
-                      <span className="font-bold text-slate-900">{dossierApp.member?.phone || dossierApp.mobile}</span>
+                      <span className="font-bold text-slate-900 font-mono">
+                        {dossierApp.mobileNumber || dossierApp.phone || dossierApp.member?.phone || dossierApp.mobile}
+                      </span>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-slate-200">
+                      <span className="text-slate-500">Alternate Mobile</span>
+                      <span className="font-semibold text-slate-800 font-mono">
+                        {dossierApp.alternateMobile || dossierApp.member?.alternate_mobile || 'None'}
+                      </span>
                     </div>
                     <div className="flex justify-between py-1 border-b border-slate-200">
                       <span className="text-slate-500">Email Address</span>
-                      <span className="font-semibold text-slate-800">{dossierApp.member?.email || dossierApp.email}</span>
+                      <span className="font-semibold text-slate-800">
+                        {dossierApp.email || dossierApp.member?.email || dossierApp.user?.email}
+                      </span>
                     </div>
                     <div className="flex justify-between py-1 border-b border-slate-200">
                       <span className="text-slate-500">Educational Qualification</span>
-                      <span className="font-semibold text-slate-800">{dossierApp.member?.educational_qualification || 'Graduate'}</span>
+                      <span className="font-semibold text-slate-800">
+                        {dossierApp.education || dossierApp.member?.education || dossierApp.member?.educational_qualification || 'Graduate / P.G.'}
+                      </span>
                     </div>
                     <div className="flex justify-between py-1 border-b border-slate-200">
                       <span className="text-slate-500">Occupation</span>
-                      <span className="font-semibold text-slate-800">{dossierApp.member?.occupation || 'Service'}</span>
+                      <span className="font-semibold text-slate-800">
+                        {dossierApp.occupation || dossierApp.member?.occupation || 'Business'}
+                      </span>
                     </div>
                     <div className="flex justify-between py-1">
                       <span className="text-slate-500">Associate Code / Name</span>
                       <span className="font-semibold text-slate-800">
-                        {dossierApp.associate_code || 'ASC-001'} ({dossierApp.associate_name || 'Alok Mohapatra'})
+                        {dossierApp.associateCode || dossierApp.associate_code || 'UTK-ASC-101'} ({dossierApp.associateName || dossierApp.associate_name || 'Pradeep Kumar Jena'})
                       </span>
                     </div>
                   </div>
@@ -753,18 +779,34 @@ const AdminApplications = () => {
                   <h5 className="font-bold uppercase tracking-wider text-slate-700 text-[11px] flex items-center gap-1.5">
                     <MapPin className="w-3.5 h-3.5 text-finance-600" /> Permanent Address (Statutory)
                   </h5>
-                  <p className="text-slate-800 font-medium leading-relaxed pt-1">
-                    {dossierApp.permanent_address || dossierApp.member?.address || 'Plot 42, Saheed Nagar, Near SBI ATM, Bhubaneswar, Khurda, Odisha - 751007'}
-                  </p>
+                  <div className="pt-1 space-y-1">
+                    <p className="text-slate-900 font-bold leading-relaxed">
+                      {dossierApp.permanentAddress?.address || dossierApp.permanent_address || dossierApp.member?.address || 'Plot 142, VIP Area, Saheed Nagar'}
+                    </p>
+                    <p className="text-slate-600">
+                      Taluka: <strong>{dossierApp.permanentAddress?.taluka || dossierApp.taluka || dossierApp.city || 'Bhubaneswar'}</strong>, District: <strong>{dossierApp.permanentAddress?.district || dossierApp.district || 'Khurda'}</strong>
+                    </p>
+                    <p className="text-slate-600">
+                      State: <strong>{dossierApp.permanentAddress?.state || dossierApp.state || 'Odisha'}</strong> - PIN: <strong className="font-mono">{dossierApp.permanentAddress?.pinCode || dossierApp.pinCode || '751001'}</strong>
+                    </p>
+                  </div>
                 </div>
 
                 <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
-                  <h5 className="font-bold uppercase tracking-wider text-slate-700 text-[11px] flex items-center gap-1.5">
+                  <h5 className="font-bold uppercase tracking-wider text-emerald-800 text-[11px] flex items-center gap-1.5">
                     <MapPin className="w-3.5 h-3.5 text-emerald-600" /> Correspondence / Mailing Address
                   </h5>
-                  <p className="text-slate-800 font-medium leading-relaxed pt-1">
-                    {dossierApp.correspondence_address || dossierApp.member?.address || 'Same as Permanent Address'}
-                  </p>
+                  <div className="pt-1 space-y-1">
+                    <p className="text-slate-900 font-bold leading-relaxed">
+                      {dossierApp.correspondenceAddress?.address || dossierApp.correspondence_address || dossierApp.permanentAddress?.address || dossierApp.permanent_address || 'Same as Permanent Address'}
+                    </p>
+                    <p className="text-slate-600">
+                      District: <strong>{dossierApp.correspondenceAddress?.district || dossierApp.permanentAddress?.district || 'Khurda'}</strong>, State: <strong>{dossierApp.correspondenceAddress?.state || dossierApp.permanentAddress?.state || 'Odisha'}</strong>
+                    </p>
+                    <p className="text-slate-600">
+                      PIN: <strong className="font-mono">{dossierApp.correspondenceAddress?.pinCode || dossierApp.permanentAddress?.pinCode || '751001'}</strong> &bull; Phone: <strong className="font-mono">{dossierApp.correspondenceAddress?.mobileNumber || dossierApp.phone || dossierApp.mobileNumber || 'Same'}</strong>
+                    </p>
+                  </div>
                 </div>
               </div>
             )}
@@ -777,28 +819,31 @@ const AdminApplications = () => {
                 </p>
 
                 <div className="space-y-2.5">
-                  {(dossierApp.documents || [
-                    { id: 'DOC-1', document_type: '3 Colour Photographs', status: 'Verified' },
-                    { id: 'DOC-2', document_type: 'Aadhaar Card', document_number: '5421-9988-1234', status: 'Verified' },
-                    { id: 'DOC-3', document_type: 'PAN Card', document_number: 'ABCPS1489K', status: 'Verified' },
-                    { id: 'DOC-4', document_type: 'Educational Certificate', document_number: 'DEG-8491', status: 'Verified' },
-                    { id: 'DOC-5', document_type: 'Birth Certificate', document_number: 'BC-1987-0941', status: 'Verified' }
-                  ]).map((doc) => (
+                  {(dossierApp.documents && dossierApp.documents.length > 0
+                    ? dossierApp.documents
+                    : [
+                        { id: 'DOC-1', document_type: '3 Colour Photographs', status: 'Verified' },
+                        { id: 'DOC-2', document_type: 'Aadhaar Card', document_number: dossierApp.primaryDocNumber || '5421-9988-1234', status: 'Verified' },
+                        { id: 'DOC-3', document_type: 'PAN Card', document_number: dossierApp.panNo || 'ABCPS1489K', status: 'Verified' },
+                        { id: 'DOC-4', document_type: 'Educational Certificate', document_number: 'DEG-8491', status: 'Verified' },
+                        { id: 'DOC-5', document_type: 'Birth Certificate', document_number: 'BC-1987-0941', status: 'Verified' }
+                      ]
+                  ).map((doc) => (
                     <div
-                      key={doc.id}
+                      key={doc.id || doc.type}
                       className="p-3.5 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between gap-3 text-xs"
                     >
                       <div className="space-y-0.5">
                         <div className="font-bold text-slate-900 flex items-center gap-2">
-                          <span>{doc.document_type}</span>
-                          {doc.document_number && (
+                          <span>{doc.type || doc.document_type}</span>
+                          {(doc.document_number || doc.docNumber || doc.documentNumber) && (
                             <span className="font-mono text-[10px] text-slate-500 bg-white border border-slate-200 px-1.5 py-0.2 rounded">
-                              {doc.document_number}
+                              {doc.document_number || doc.docNumber || doc.documentNumber}
                             </span>
                           )}
                         </div>
                         <div className="text-[10px] text-slate-500">
-                          Status: <strong className={doc.status === 'Verified' ? 'text-emerald-700' : 'text-amber-700'}>{doc.status}</strong>
+                          File: <span className="font-mono text-slate-700">{doc.fileName || doc.file_name || 'attachment.pdf'}</span> &bull; Status: <strong className={doc.status === 'Verified' ? 'text-emerald-700' : 'text-amber-700'}>{doc.status || 'Uploaded'}</strong>
                         </div>
                       </div>
 
@@ -839,7 +884,7 @@ const AdminApplications = () => {
                   </div>
                   <div className="flex justify-between py-1 border-b border-slate-200">
                     <span className="text-slate-500">Share Count &amp; Paid Value</span>
-                    <span className="font-bold text-slate-900">{dossierApp.share_count || 10} Shares (₹{dossierApp.share_value || 100})</span>
+                    <span className="font-bold text-slate-900">{dossierApp.shareCount || dossierApp.share_count || 10} Shares (₹{dossierApp.share_value || 200})</span>
                   </div>
                   <div className="flex justify-between py-1 border-b border-slate-200">
                     <span className="text-slate-500">Depositor Status</span>
@@ -847,11 +892,11 @@ const AdminApplications = () => {
                   </div>
                   <div className="flex justify-between py-1 border-b border-slate-200">
                     <span className="text-slate-500">Repayment Preference</span>
-                    <span className="font-semibold text-slate-800">{dossierApp.repayment_preference || 'First depositor'}</span>
+                    <span className="font-semibold text-slate-800">{dossierApp.repaymentMode || dossierApp.repayment_preference || 'First depositor'}</span>
                   </div>
                   <div className="flex justify-between py-1">
                     <span className="text-slate-500">Form 15G / 15H Enclosed</span>
-                    <span className="font-semibold text-slate-800">{dossierApp.form_15g_enclosed ? 'Yes (Enclosed)' : 'No'}</span>
+                    <span className="font-semibold text-slate-800">{dossierApp.form_15g_enclosed !== false ? 'Yes (Enclosed)' : 'No'}</span>
                   </div>
                 </div>
 
@@ -861,19 +906,23 @@ const AdminApplications = () => {
                   </h5>
                   <div className="flex justify-between py-1 border-b border-slate-200">
                     <span className="text-slate-500">Nominee Name</span>
-                    <span className="font-bold text-slate-900">{dossierApp.nominee_name || dossierApp.member?.nomineeName || 'Pooja Sharma'}</span>
+                    <span className="font-bold text-slate-900">{dossierApp.nomineeName || dossierApp.nominee_name || dossierApp.nominee?.name || 'Family Nominee'}</span>
                   </div>
                   <div className="flex justify-between py-1 border-b border-slate-200">
                     <span className="text-slate-500">Relationship</span>
-                    <span className="font-semibold text-slate-800">{dossierApp.nominee_relation || dossierApp.member?.nomineeRelationship || 'Spouse'}</span>
+                    <span className="font-semibold text-slate-800">{dossierApp.nomineeRelationship || dossierApp.nominee_relation || dossierApp.nominee?.relationship || 'Spouse'}</span>
                   </div>
                   <div className="flex justify-between py-1 border-b border-slate-200">
                     <span className="text-slate-500">Nominee Age</span>
-                    <span className="font-semibold text-slate-800">{dossierApp.nominee_age || '34 Years'}</span>
+                    <span className="font-semibold text-slate-800">{dossierApp.nomineeAge || dossierApp.nominee_age || dossierApp.nominee?.age || '32'} Years</span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-slate-200">
+                    <span className="text-slate-500">Nominee Mobile</span>
+                    <span className="font-mono font-semibold text-slate-800">{dossierApp.nomineeMobile || dossierApp.nominee?.mobileNumber || 'Not provided'}</span>
                   </div>
                   <div className="flex justify-between py-1">
                     <span className="text-slate-500">Nominee Address</span>
-                    <span className="font-semibold text-slate-800">{dossierApp.nominee_address || 'Same as applicant address'}</span>
+                    <span className="font-semibold text-slate-800">{dossierApp.nomineeAddress || dossierApp.nominee_address || dossierApp.nominee?.address || 'Same as applicant address'}</span>
                   </div>
                 </div>
               </div>
@@ -889,21 +938,21 @@ const AdminApplications = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                     <div>
                       <span className="text-slate-500 block text-[10px]">Witness Name</span>
-                      <span className="font-bold text-slate-900">{dossierApp.witness_name || 'Manas Ranjan Dash'}</span>
+                      <span className="font-bold text-slate-900">{dossierApp.witnessName || dossierApp.witness_name || dossierApp.witness?.name || 'Pradeep Kumar Sahoo'}</span>
                     </div>
                     <div>
                       <span className="text-slate-500 block text-[10px]">Is Company Member?</span>
                       <span className="font-bold text-slate-900">
-                        {dossierApp.witness_is_member ? `Yes (Member #${dossierApp.witness_membership_no || 'UF-2024-0012'})` : 'No'}
+                        {(dossierApp.witnessIsMember ?? dossierApp.witness_is_member ?? dossierApp.witness?.isMember) ? `Yes (Member #${dossierApp.witnessMembershipNo || dossierApp.witness_membership_no || 'UF-1012'})` : 'No'}
                       </span>
                     </div>
                     <div>
                       <span className="text-slate-500 block text-[10px]">Witness Mobile</span>
-                      <span className="font-semibold text-slate-800">{dossierApp.witness_mobile || '9437012345'}</span>
+                      <span className="font-semibold text-slate-800 font-mono">{dossierApp.witnessMobile || dossierApp.witness_mobile || dossierApp.witness?.mobileNumber || '9861011223'}</span>
                     </div>
                     <div>
                       <span className="text-slate-500 block text-[10px]">Witness Address</span>
-                      <span className="font-semibold text-slate-800">{dossierApp.witness_address || 'Saheed Nagar, Bhubaneswar'}</span>
+                      <span className="font-semibold text-slate-800">{dossierApp.witnessAddress || dossierApp.witness_address || dossierApp.witness?.address || 'Saheed Nagar, Bhubaneswar'}</span>
                     </div>
                   </div>
                 </div>
@@ -922,11 +971,11 @@ const AdminApplications = () => {
                       />
                     ) : (
                       <span className="font-serif italic text-lg text-slate-700">
-                        {dossierApp.member?.name || dossierApp.fullName || 'Signed Electronically'}
+                        {dossierApp.fullName || dossierApp.member?.name || dossierApp.name || 'Signed Electronically'}
                       </span>
                     )}
                     <span className="text-[10px] text-slate-400 mt-2">
-                      Verified Electronic Signature Captured on Application Submission
+                      Verified Electronic Signature Captured on Application Submission ({formatDate(dossierApp.signatureDate || dossierApp.created_at || '2026-09-01')})
                     </span>
                   </div>
                 </div>

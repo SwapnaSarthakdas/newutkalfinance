@@ -29,10 +29,11 @@ import Logo from '../../components/common/Logo';
 import Modal from '../../components/common/Modal';
 import { useFinance } from '../../context/FinanceContext';
 import { useAuth } from '../../context/AuthContext';
+import { api } from '../../services/api';
 
 const MembershipFormPage = ({ onNavigate }) => {
   const { user } = useAuth();
-  const { members, addMember, addToast } = useFinance();
+  const { members, addMember, addApplication, addToast } = useFinance();
 
   const [formMode, setFormMode] = useState(() => {
     if (typeof window !== 'undefined' && window.location.hash.toLowerCase().includes('filled')) {
@@ -51,21 +52,21 @@ const MembershipFormPage = ({ onNavigate }) => {
     mobileNumber: '',
     password: '',
     confirmPassword: '',
-    dob: '',
+    dob: '1992-05-15',
     gender: 'Male',
     maritalStatus: 'Married',
-    occupation: 'Business Owner / Trader',
+    occupation: 'Service',
     panNo: '',
     address: '',
     city: 'Bhubaneswar',
-    taluka: 'Bhubaneswar',
+    taluka: '',
     district: 'Khurda',
     state: 'Odisha',
-    pinCode: '751001',
+    pinCode: '751007',
     nomineeName: '',
     nomineeRelationship: 'Spouse',
-    nomineeAge: '32',
-    agreedTerms: true
+    nomineeAge: '30',
+    agreedTerms: false
   });
 
   const [showPassword, setShowPassword] = useState(false);
@@ -80,15 +81,16 @@ const MembershipFormPage = ({ onNavigate }) => {
     window.print();
   };
 
-  const handleInputChange = (e) => {
+  const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }));
   };
+  const handleInputChange = handleChange;
 
-  const handleFormSubmit = (e) => {
+  const handleRegisterForm = (e) => {
     e.preventDefault();
     setErrorMsg('');
 
@@ -118,40 +120,98 @@ const MembershipFormPage = ({ onNavigate }) => {
     }
 
     setIsSubmitting(true);
-    setTimeout(() => {
-      const newMember = addMember({
-        name: formData.fullName,
-        fullName: formData.fullName,
-        fatherOrHusbandName: formData.fatherOrHusbandName,
-        email: formData.email.trim().toLowerCase(),
-        phone: formData.mobileNumber.trim(),
-        mobileNumber: formData.mobileNumber.trim(),
-        password: formData.password,
-        dob: formData.dob || '1992-05-15',
-        gender: formData.gender,
-        maritalStatus: formData.maritalStatus,
-        occupation: formData.occupation,
-        panNo: formData.panNo || 'ABCDE1234F',
+    const memId = `UF-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+    const empId = `EMP-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+    const paymentRef = `UTR${Date.now().toString().slice(-8)}`;
+
+    const memberPayload = {
+      id: memId,
+      membershipId: memId,
+      empId,
+      name: formData.fullName,
+      fullName: formData.fullName,
+      firstName: formData.fullName.split(' ')[0] || 'Member',
+      lastName: formData.fullName.split(' ').slice(1).join(' ') || '',
+      fatherOrHusbandName: formData.fatherOrHusbandName,
+      email: formData.email.trim().toLowerCase(),
+      phone: formData.mobileNumber.trim(),
+      mobileNumber: formData.mobileNumber.trim(),
+      password: formData.password,
+      dob: formData.dob || '1992-05-15',
+      gender: formData.gender || 'Male',
+      maritalStatus: formData.maritalStatus || 'Married',
+      occupation: formData.occupation || 'Service',
+      religion: 'Hindu',
+      category: 'General',
+      education: 'Graduate / P.G.',
+      panNo: formData.panNo || 'ABCDE1234F',
+      address: formData.address || 'Plot 142, VIP Area, Saheed Nagar',
+      city: formData.city || 'Bhubaneswar',
+      taluka: formData.taluka || formData.city || 'Bhubaneswar',
+      district: formData.district || 'Khurda',
+      state: formData.state || 'Odisha',
+      pinCode: formData.pinCode || '751007',
+      permanentAddress: {
         address: formData.address || 'Plot 142, VIP Area, Saheed Nagar',
-        city: formData.city || 'Bhubaneswar',
         taluka: formData.taluka || formData.city || 'Bhubaneswar',
         district: formData.district || 'Khurda',
         state: formData.state || 'Odisha',
+        pinCode: formData.pinCode || '751007'
+      },
+      correspondenceAddress: {
+        address: formData.address || 'Plot 142, VIP Area, Saheed Nagar',
+        district: formData.district || 'Khurda',
+        state: formData.state || 'Odisha',
         pinCode: formData.pinCode || '751007',
-        nomineeName: formData.nomineeName || 'Family Nominee',
-        nomineeRelationship: formData.nomineeRelationship || 'Spouse',
-        nomineeAge: formData.nomineeAge || '30',
-        initialDeposit: 25000,
-        branchName: `${formData.city || 'Bhubaneswar'} Branch`
-      });
+        mobileNumber: formData.mobileNumber.trim()
+      },
+      nominee: {
+        name: formData.nomineeName || 'Family Nominee',
+        relationship: formData.nomineeRelationship || 'Spouse',
+        age: formData.nomineeAge || '30',
+        address: formData.address || 'Plot 142, VIP Area, Saheed Nagar, Bhubaneswar'
+      },
+      nomineeName: formData.nomineeName || 'Family Nominee',
+      nomineeRelationship: formData.nomineeRelationship || 'Spouse',
+      nomineeAge: formData.nomineeAge || '30',
+      initialDeposit: 25000,
+      branchName: `${formData.city || 'Bhubaneswar'} Branch`,
+      paymentMethod: 'UPI',
+      paymentTxnRef: paymentRef,
+      paymentStatus: 'Pending Admin Verification',
+      agreedTerms: true
+    };
 
-      setCreatedMember(newMember);
-      setFormMode('filled');
-      setIsSubmitting(false);
-      setFillModalOpen(false);
-      addToast('Membership Form registered successfully! You can now log in.', 'success');
-    }, 800);
+    // 1. Submit to Backend API in background
+    api.auth.register(memberPayload).catch((err) => {
+      console.warn('Background API register call in MembershipForm:', err.message);
+    });
+
+    const newMember = addMember(memberPayload);
+
+    if (addApplication) {
+      addApplication({
+        id: `APP-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+        member_id: memId,
+        status: 'Submitted',
+        membership_fee: 200,
+        payment_amount: 200,
+        payment_status: 'Pending Admin Verification',
+        payment_method: 'UPI',
+        payment_txn_ref: paymentRef,
+        created_at: new Date().toISOString(),
+        ...newMember,
+        member: newMember
+      });
+    }
+
+    setCreatedMember(newMember);
+    setFormMode('filled');
+    setIsSubmitting(false);
+    setFillModalOpen(false);
+    addToast('Statutory Membership Form registered successfully! Admin can now view all details.', 'success');
   };
+  const handleFormSubmit = handleRegisterForm;
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col justify-between selection:bg-[#003E9E] selection:text-white">

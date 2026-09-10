@@ -110,6 +110,10 @@ export const api = {
 
   // Member Management & Profile
   members: {
+    async getAll() {
+      return request('/members');
+    },
+
     async getById(id) {
       return request(`/members/${id}`);
     },

@@ -193,11 +193,14 @@ export async function handleApiRequest(req, res) {
         status: 'Submitted',
         rejection_reason: null,
         correction_notes: null,
-        membership_fee: 500,
+        membership_fee: 200,
+        payment_method: body.paymentMethod || body.payment_method || 'UPI',
+        payment_txn_ref: body.paymentTxnRef || body.payment_txn_ref || body.paymentRef || null,
+        payment_status: 'Pending Admin Verification',
         membership_fee_receipt: `REC-2026-${Math.floor(1000 + Math.random() * 9000)}`,
         share_number: `SH-${Math.floor(1000 + Math.random() * 9000)}`,
         share_count: Number(shareCount) || 10,
-        share_value: 500,
+        share_value: 200,
         share_date: signatureDate.replace(/-/g, ''),
         depositor_status: 'Share Holder',
         repayment_preference: repaymentMode,
@@ -325,12 +328,16 @@ export async function handleApiRequest(req, res) {
         middle_name: middleName,
         last_name: lastName,
         name: computedFullName,
+        fullName: computedFullName,
         father_or_husband_name: fatherOrHusbandName || '',
+        fatherOrHusbandName: fatherOrHusbandName || '',
         guardian_type: guardianType,
+        guardianType: guardianType,
         dob: dob || '1995-01-01',
         age: age ? Number(age) : 29,
         gender,
         marital_status: maritalStatus,
+        maritalStatus: maritalStatus,
         education,
         religion,
         category,
@@ -338,17 +345,69 @@ export async function handleApiRequest(req, res) {
         branch_id: branch.id,
         branch_name: branch.name,
         branch_code: branch.code,
+        branchName: branch.name,
+        branchCode: branch.code,
         associate_id: associate.id,
         associate_code: associate.code,
         associate_name: associate.name,
+        associateName: associate.name,
+        associateCode: associate.code,
         account_status: 'Pending Verification',
+        accountStatus: 'Pending Verification',
         kyc_status: 'Under Review',
+        kycStatus: 'Under Review',
         available_balance: 0,
         total_deposits: 0,
         active_loan: 0,
         joined_date: new Date().toISOString().split('T')[0],
+        joinedDate: new Date().toISOString().split('T')[0],
         pan_no: panNo || '',
-        alternate_mobile: alternateMobile
+        panNo: panNo || '',
+        alternate_mobile: alternateMobile || '',
+        alternateMobile: alternateMobile || '',
+        phone: mobileNumber,
+        mobileNumber: mobileNumber,
+        email: email,
+        permanent_address: permanentAddress?.address || '',
+        permanentAddress: permanentAddress || null,
+        address: permanentAddress?.address || '',
+        taluka: permanentAddress?.taluka || '',
+        city: permanentAddress?.district || permanentAddress?.taluka || 'Bhubaneswar',
+        district: permanentAddress?.district || 'Khurda',
+        state: permanentAddress?.state || 'Odisha',
+        pinCode: permanentAddress?.pinCode || '751001',
+        correspondence_address: correspondenceAddress?.address || permanentAddress?.address || '',
+        correspondenceAddress: correspondenceAddress || null,
+        nominee_name: nominee?.name || '',
+        nomineeName: nominee?.name || '',
+        nominee_relationship: nominee?.relationship || '',
+        nomineeRelationship: nominee?.relationship || '',
+        nominee_age: nominee?.age || null,
+        nomineeAge: nominee?.age || null,
+        nominee_address: nominee?.address || '',
+        nomineeAddress: nominee?.address || '',
+        nominee: nominee || null,
+        witness_name: witness?.name || '',
+        witnessName: witness?.name || '',
+        witness_mobile: witness?.mobileNumber || '',
+        witnessMobile: witness?.mobileNumber || '',
+        witness_address: witness?.address || '',
+        witnessAddress: witness?.address || '',
+        witness: witness || null,
+        share_count: Number(shareCount) || 10,
+        shareCount: Number(shareCount) || 10,
+        repayment_mode: repaymentMode,
+        repaymentMode: repaymentMode,
+        tax_deduction: taxDeduction,
+        form15g: Boolean(form15g),
+        signature_data: signatureData || null,
+        signatureData: signatureData || null,
+        signature_date: signatureDate,
+        payment_method: body.paymentMethod || body.payment_method || 'UPI',
+        paymentMethod: body.paymentMethod || body.payment_method || 'UPI',
+        payment_txn_ref: body.paymentTxnRef || body.payment_txn_ref || body.paymentRef || null,
+        paymentTxnRef: body.paymentTxnRef || body.payment_txn_ref || body.paymentRef || null,
+        payment_status: 'Pending Admin Verification'
       });
 
       // Notification
@@ -357,7 +416,7 @@ export async function handleApiRequest(req, res) {
         target_role: 'ADMIN',
         user_id: null,
         title: 'New Statutory Membership Application',
-        message: `${computedFullName} submitted application ${applicationId} (Fee ₹500 recorded).`,
+        message: `${computedFullName} submitted application ${applicationId} (Fee ₹200 recorded via ${body.paymentMethod || body.payment_method || 'UPI'}).`,
         type: 'member',
         read: false,
         link: '/admin/applications'
@@ -397,6 +456,7 @@ export async function handleApiRequest(req, res) {
           role: 'MEMBER'
         },
         member: memberRecord,
+        application: applicationRecord,
         token
       });
     }
@@ -618,7 +678,7 @@ export async function handleApiRequest(req, res) {
 
       let apps = db.findAll('membership_applications');
 
-      // Join with Member, User, Addresses, Nominee, Documents
+      // Join with Member, User, Addresses, Nominee, Documents, Share, Witness
       const detailedApps = apps.map((app) => {
         const user = db.findById('users', app.user_id) || {};
         const member = db.findOne('members', (m) => m.application_id === app.id) || {};
@@ -626,15 +686,114 @@ export async function handleApiRequest(req, res) {
         const nominee = db.findOne('nominees', (n) => n.application_id === app.id);
         const witness = db.findOne('witnesses', (w) => w.application_id === app.id);
         const documents = db.findAll('documents', (d) => d.application_id === app.id);
+        const share = db.findOne('share_details', (s) => s.application_id === app.id);
+
+        const permAddr = addresses.find((a) => a.type === 'Permanent') || {};
+        const corrAddr = addresses.find((a) => a.type === 'Correspondence') || {};
+
+        const fullName =
+          member.fullName ||
+          member.name ||
+          user.name ||
+          `${member.first_name || ''} ${member.last_name || ''}`.trim() ||
+          'New Applicant';
 
         return {
           ...app,
           user: { id: user.id, email: user.email, mobileNumber: user.mobile_number, empId: user.emp_id },
-          member,
-          addresses,
-          nominee,
-          witness,
-          documents
+          member: {
+            ...member,
+            name: fullName,
+            fullName,
+            email: user.email || member.email,
+            phone: user.mobile_number || member.phone || member.mobileNumber,
+            address: permAddr.address_line || member.permanent_address || member.address
+          },
+          name: fullName,
+          fullName,
+          email: user.email || member.email || app.email || '',
+          phone: user.mobile_number || member.phone || member.mobileNumber || '',
+          mobileNumber: user.mobile_number || member.phone || member.mobileNumber || '',
+          fatherOrHusbandName: member.father_or_husband_name || member.fatherOrHusbandName || '',
+          guardianType: member.guardian_type || member.guardianType || 'S/o.',
+          dob: member.dob || '',
+          age: member.age || '',
+          gender: member.gender || 'Male',
+          maritalStatus: member.marital_status || member.maritalStatus || 'Married',
+          education: member.education || 'Graduate / P.G.',
+          religion: member.religion || 'Hindu',
+          category: member.category || 'General',
+          occupation: member.occupation || 'Business',
+          panNo: member.pan_no || member.panNo || '',
+          alternateMobile: member.alternate_mobile || member.alternateMobile || '',
+          branchName: member.branch_name || member.branchName || 'Bhubaneswar HQ',
+          branchCode: member.branch_code || member.branchCode || '075101',
+          associateName: member.associate_name || member.associateName || 'Pradeep Kumar Jena',
+          associateCode: member.associate_code || member.associateCode || 'UTK-ASC-101',
+          permanent_address: permAddr.address_line || member.permanent_address || member.address || '',
+          permanentAddress: {
+            address: permAddr.address_line || member.permanent_address || member.address || '',
+            taluka: permAddr.taluka || member.taluka || '',
+            district: permAddr.district || member.district || 'Khurda',
+            state: permAddr.state || member.state || 'Odisha',
+            pinCode: permAddr.pin_code || member.pinCode || '751001'
+          },
+          correspondence_address: corrAddr.address_line || member.correspondence_address || permAddr.address_line || member.address || '',
+          correspondenceAddress: {
+            address: corrAddr.address_line || member.correspondence_address || permAddr.address_line || member.address || '',
+            district: corrAddr.district || permAddr.district || 'Khurda',
+            state: corrAddr.state || permAddr.state || 'Odisha',
+            pinCode: corrAddr.pin_code || permAddr.pin_code || '751001',
+            mobileNumber: corrAddr.mobile_number || user.mobile_number || member.phone || ''
+          },
+          nominee_name: nominee?.name || member.nominee_name || member.nomineeName || '',
+          nominee_relation: nominee?.relationship || member.nominee_relationship || member.nomineeRelationship || '',
+          nominee_age: nominee?.age || member.nominee_age || member.nomineeAge || '',
+          nominee_address: nominee?.address || member.nominee_address || member.nomineeAddress || '',
+          nominee: nominee ? {
+            title: nominee.title || 'Mr.',
+            name: nominee.name || '',
+            lastName: nominee.last_name || '',
+            relationship: nominee.relationship || '',
+            dob: nominee.dob || null,
+            age: nominee.age || null,
+            address: nominee.address || '',
+            mobileNumber: nominee.mobile_number || '',
+            idDetails: nominee.id_details || ''
+          } : (member.nominee || null),
+          witness_name: witness?.name || member.witness_name || member.witnessName || '',
+          witness_is_member: witness ? Boolean(witness.is_member) : Boolean(member.witness_is_member),
+          witness_membership_no: witness?.membership_number || member.witness_membership_number || member.witnessMembershipNo || '',
+          witness_mobile: witness?.mobile_number || member.witness_mobile || member.witnessMobile || '',
+          witness_address: witness?.address || member.witness_address || member.witnessAddress || '',
+          witness: witness ? {
+            name: witness.name,
+            isMember: Boolean(witness.is_member),
+            membershipNumber: witness.membership_number,
+            mobileNumber: witness.mobile_number,
+            address: witness.address,
+            district: witness.district,
+            state: witness.state,
+            pinCode: witness.pin_code,
+            proofType: witness.proof_type,
+            proofNumber: witness.proof_number
+          } : (member.witness || null),
+          documents: documents.length ? documents : (member.documents || []),
+          share: share || null,
+          share_number: app.share_number || share?.share_number || 'SH-8492',
+          share_count: Number(app.share_count) || share?.share_count || 10,
+          share_value: Number(app.share_value) || share?.share_value || 200,
+          repayment_preference: app.repayment_preference || 'First depositor',
+          depositor_status: app.depositor_status || 'Share Holder',
+          form_15g_enclosed: app.form_15g_enclosed ?? true,
+          signature: app.signature_data || member.signature_data || null,
+          signatureData: app.signature_data || member.signature_data || null,
+          signatureDate: app.signature_date || member.signature_date || null,
+          membership_fee: app.membership_fee || 200,
+          payment_amount: app.membership_fee || 200,
+          payment_status: app.payment_status || 'Pending Admin Verification',
+          payment_method: app.payment_method || 'UPI',
+          payment_txn_ref: app.payment_txn_ref || `UTR${Date.now().toString().slice(-8)}`
         };
       });
 
@@ -671,17 +830,116 @@ export async function handleApiRequest(req, res) {
       const witness = db.findOne('witnesses', (w) => w.application_id === app.id);
       const documents = db.findAll('documents', (d) => d.application_id === app.id);
       const auditLogs = db.findAll('audit_logs', (l) => l.target_id === app.id);
+      const share = db.findOne('share_details', (s) => s.application_id === app.id);
+
+      const permAddr = addresses.find((a) => a.type === 'Permanent') || {};
+      const corrAddr = addresses.find((a) => a.type === 'Correspondence') || {};
+      const fullName =
+        member.fullName ||
+        member.name ||
+        user.name ||
+        `${member.first_name || ''} ${member.last_name || ''}`.trim() ||
+        'New Applicant';
 
       return sendJson(res, 200, {
         success: true,
         application: {
           ...app,
           user: { id: user.id, email: user.email, mobileNumber: user.mobile_number, empId: user.emp_id },
-          member,
+          member: {
+            ...member,
+            name: fullName,
+            fullName,
+            email: user.email || member.email,
+            phone: user.mobile_number || member.phone || member.mobileNumber,
+            address: permAddr.address_line || member.permanent_address || member.address
+          },
+          name: fullName,
+          fullName,
+          email: user.email || member.email || app.email || '',
+          phone: user.mobile_number || member.phone || member.mobileNumber || '',
+          mobileNumber: user.mobile_number || member.phone || member.mobileNumber || '',
+          fatherOrHusbandName: member.father_or_husband_name || member.fatherOrHusbandName || '',
+          guardianType: member.guardian_type || member.guardianType || 'S/o.',
+          dob: member.dob || '',
+          age: member.age || '',
+          gender: member.gender || 'Male',
+          maritalStatus: member.marital_status || member.maritalStatus || 'Married',
+          education: member.education || 'Graduate / P.G.',
+          religion: member.religion || 'Hindu',
+          category: member.category || 'General',
+          occupation: member.occupation || 'Business',
+          panNo: member.pan_no || member.panNo || '',
+          alternateMobile: member.alternate_mobile || member.alternateMobile || '',
+          branchName: member.branch_name || member.branchName || 'Bhubaneswar HQ',
+          branchCode: member.branch_code || member.branchCode || '075101',
+          associateName: member.associate_name || member.associateName || 'Pradeep Kumar Jena',
+          associateCode: member.associate_code || member.associateCode || 'UTK-ASC-101',
+          permanent_address: permAddr.address_line || member.permanent_address || member.address || '',
+          permanentAddress: {
+            address: permAddr.address_line || member.permanent_address || member.address || '',
+            taluka: permAddr.taluka || member.taluka || '',
+            district: permAddr.district || member.district || 'Khurda',
+            state: permAddr.state || member.state || 'Odisha',
+            pinCode: permAddr.pin_code || member.pinCode || '751001'
+          },
+          correspondence_address: corrAddr.address_line || member.correspondence_address || permAddr.address_line || member.address || '',
+          correspondenceAddress: {
+            address: corrAddr.address_line || member.correspondence_address || permAddr.address_line || member.address || '',
+            district: corrAddr.district || permAddr.district || 'Khurda',
+            state: corrAddr.state || permAddr.state || 'Odisha',
+            pinCode: corrAddr.pin_code || permAddr.pin_code || '751001',
+            mobileNumber: corrAddr.mobile_number || user.mobile_number || member.phone || ''
+          },
           addresses,
-          nominee,
-          witness,
-          documents,
+          nominee: nominee ? {
+            title: nominee.title || 'Mr.',
+            name: nominee.name || '',
+            lastName: nominee.last_name || '',
+            relationship: nominee.relationship || '',
+            dob: nominee.dob || null,
+            age: nominee.age || null,
+            address: nominee.address || '',
+            mobileNumber: nominee.mobile_number || '',
+            idDetails: nominee.id_details || ''
+          } : (member.nominee || null),
+          nominee_name: nominee?.name || member.nominee_name || member.nomineeName || '',
+          nominee_relation: nominee?.relationship || member.nominee_relationship || member.nomineeRelationship || '',
+          nominee_age: nominee?.age || member.nominee_age || member.nomineeAge || '',
+          nominee_address: nominee?.address || member.nominee_address || member.nomineeAddress || '',
+          witness: witness ? {
+            name: witness.name,
+            isMember: Boolean(witness.is_member),
+            membershipNumber: witness.membership_number,
+            mobileNumber: witness.mobile_number,
+            address: witness.address,
+            district: witness.district,
+            state: witness.state,
+            pinCode: witness.pin_code,
+            proofType: witness.proof_type,
+            proofNumber: witness.proof_number
+          } : (member.witness || null),
+          witness_name: witness?.name || member.witness_name || member.witnessName || '',
+          witness_is_member: witness ? Boolean(witness.is_member) : Boolean(member.witness_is_member),
+          witness_membership_no: witness?.membership_number || member.witness_membership_number || member.witnessMembershipNo || '',
+          witness_mobile: witness?.mobile_number || member.witness_mobile || member.witnessMobile || '',
+          witness_address: witness?.address || member.witness_address || member.witnessAddress || '',
+          documents: documents.length ? documents : (member.documents || []),
+          share: share || null,
+          share_number: app.share_number || share?.share_number || 'SH-8492',
+          share_count: Number(app.share_count) || share?.share_count || 10,
+          share_value: Number(app.share_value) || share?.share_value || 200,
+          repayment_preference: app.repayment_preference || 'First depositor',
+          depositor_status: app.depositor_status || 'Share Holder',
+          form_15g_enclosed: app.form_15g_enclosed ?? true,
+          signature: app.signature_data || member.signature_data || null,
+          signatureData: app.signature_data || member.signature_data || null,
+          signatureDate: app.signature_date || member.signature_date || null,
+          membership_fee: app.membership_fee || 200,
+          payment_amount: app.membership_fee || 200,
+          payment_status: app.payment_status || 'Pending Admin Verification',
+          payment_method: app.payment_method || 'UPI',
+          payment_txn_ref: app.payment_txn_ref || `UTR${Date.now().toString().slice(-8)}`,
           auditLogs
         }
       });
@@ -873,6 +1131,139 @@ export async function handleApiRequest(req, res) {
     // -------------------------------------------------------------
     // MEMBER PROFILE & SENSITIVE FIELD LOCKING
     // -------------------------------------------------------------
+
+    // GET /api/members (List All Members with Enriched Data)
+    if (pathname === '/api/members' && method === 'GET') {
+      const allMembers = db.findAll('members');
+      const enrichedMembers = allMembers.map((member) => {
+        const user = db.findById('users', member.user_id) || {};
+        const addresses = db.findAll('addresses', (a) => a.member_id === member.id || a.application_id === member.application_id);
+        const nominee = db.findOne('nominees', (n) => n.member_id === member.id || n.application_id === member.application_id);
+        const witness = db.findOne('witnesses', (w) => w.member_id === member.id || w.application_id === member.application_id);
+        const documents = db.findAll('documents', (d) => d.member_id === member.id || d.application_id === member.application_id);
+        const share = db.findOne('share_details', (s) => s.member_id === member.id || s.application_id === member.application_id);
+        const application = db.findById('membership_applications', member.application_id);
+
+        const permAddr = addresses.find((a) => a.type === 'Permanent') || {};
+        const corrAddr = addresses.find((a) => a.type === 'Correspondence') || {};
+        const fullName =
+          member.fullName ||
+          member.name ||
+          user.name ||
+          `${member.first_name || ''} ${member.last_name || ''}`.trim() ||
+          'Registered Member';
+
+        return {
+          ...member,
+          id: member.id || member.membership_id,
+          membershipId: member.id || member.membership_id,
+          empId: user.emp_id || member.emp_id || '',
+          name: fullName,
+          fullName,
+          email: user.email || member.email || '',
+          phone: user.mobile_number || member.phone || member.mobileNumber || '',
+          mobileNumber: user.mobile_number || member.phone || member.mobileNumber || '',
+          fatherOrHusbandName: member.father_or_husband_name || member.fatherOrHusbandName || '',
+          guardianType: member.guardian_type || member.guardianType || 'S/o.',
+          dob: member.dob || '1995-01-01',
+          age: member.age || 29,
+          gender: member.gender || 'Male',
+          maritalStatus: member.marital_status || member.maritalStatus || 'Married',
+          education: member.education || 'Graduate / P.G.',
+          religion: member.religion || 'Hindu',
+          category: member.category || 'General',
+          occupation: member.occupation || 'Business',
+          panNo: member.pan_no || member.panNo || '',
+          alternateMobile: member.alternate_mobile || member.alternateMobile || '',
+          branchName: member.branch_name || member.branchName || 'Bhubaneswar HQ',
+          branchCode: member.branch_code || member.branchCode || '075101',
+          associateName: member.associate_name || member.associateName || 'Pradeep Kumar Jena',
+          associateCode: member.associate_code || member.associateCode || 'UTK-ASC-101',
+          address: permAddr.address_line || member.permanent_address || member.address || '',
+          city: permAddr.district || member.city || 'Bhubaneswar',
+          taluka: permAddr.taluka || member.taluka || '',
+          district: permAddr.district || member.district || 'Khurda',
+          state: permAddr.state || member.state || 'Odisha',
+          pinCode: permAddr.pin_code || member.pinCode || '751001',
+          permanentAddress: {
+            address: permAddr.address_line || member.permanent_address || member.address || '',
+            taluka: permAddr.taluka || member.taluka || '',
+            district: permAddr.district || member.district || 'Khurda',
+            state: permAddr.state || member.state || 'Odisha',
+            pinCode: permAddr.pin_code || member.pinCode || '751001'
+          },
+          correspondenceAddress: {
+            address: corrAddr.address_line || member.correspondence_address || permAddr.address_line || member.address || '',
+            district: corrAddr.district || member.district || 'Khurda',
+            state: corrAddr.state || member.state || 'Odisha',
+            pinCode: corrAddr.pin_code || member.pinCode || '751001',
+            mobileNumber: corrAddr.mobile_number || user.mobile_number || member.phone || ''
+          },
+          nominee_name: nominee?.name || member.nominee_name || member.nomineeName || '',
+          nomineeName: nominee?.name || member.nominee_name || member.nomineeName || '',
+          nominee_relationship: nominee?.relationship || member.nominee_relationship || member.nomineeRelationship || '',
+          nomineeRelationship: nominee?.relationship || member.nominee_relationship || member.nomineeRelationship || '',
+          nominee_age: nominee?.age || member.nominee_age || member.nomineeAge || '',
+          nomineeAge: nominee?.age || member.nominee_age || member.nomineeAge || '',
+          nominee_address: nominee?.address || member.nominee_address || member.nomineeAddress || '',
+          nomineeAddress: nominee?.address || member.nominee_address || member.nomineeAddress || '',
+          nominee: nominee ? {
+            title: nominee.title || 'Mr.',
+            name: nominee.name || '',
+            lastName: nominee.last_name || '',
+            relationship: nominee.relationship || '',
+            dob: nominee.dob || null,
+            age: nominee.age || null,
+            address: nominee.address || '',
+            mobileNumber: nominee.mobile_number || '',
+            idDetails: nominee.id_details || ''
+          } : (member.nominee || null),
+          witness_name: witness?.name || member.witness_name || member.witnessName || '',
+          witnessName: witness?.name || member.witness_name || member.witnessName || '',
+          witness_is_member: witness ? Boolean(witness.is_member) : Boolean(member.witness_is_member),
+          witnessIsMember: witness ? Boolean(witness.is_member) : Boolean(member.witness_is_member),
+          witness_membership_no: witness?.membership_number || member.witness_membership_number || member.witnessMembershipNo || '',
+          witnessMembershipNo: witness?.membership_number || member.witness_membership_number || member.witnessMembershipNo || '',
+          witness_mobile: witness?.mobile_number || member.witness_mobile || member.witnessMobile || '',
+          witnessMobile: witness?.mobile_number || member.witness_mobile || member.witnessMobile || '',
+          witness_address: witness?.address || member.witness_address || member.witnessAddress || '',
+          witnessAddress: witness?.address || member.witness_address || member.witnessAddress || '',
+          witness: witness ? {
+            name: witness.name,
+            isMember: Boolean(witness.is_member),
+            membershipNumber: witness.membership_number,
+            mobileNumber: witness.mobile_number,
+            address: witness.address,
+            district: witness.district,
+            state: witness.state,
+            pinCode: witness.pin_code,
+            proofType: witness.proof_type,
+            proofNumber: witness.proof_number
+          } : (member.witness || null),
+          documents: documents.length ? documents : (member.documents || []),
+          share: share || null,
+          shareCount: Number(member.share_count) || share?.share_count || 10,
+          share_count: Number(member.share_count) || share?.share_count || 10,
+          repaymentMode: member.repayment_mode || member.repaymentMode || 'First depositor',
+          taxDeduction: member.tax_deduction || member.taxDeduction || 'No',
+          form15g: member.form15g ?? true,
+          signatureData: member.signature_data || member.signatureData || application?.signature_data || null,
+          signature: member.signature_data || member.signatureData || application?.signature_data || null,
+          signatureDate: member.signature_date || member.signatureDate || null,
+          paymentMethod: member.payment_method || member.paymentMethod || application?.payment_method || 'UPI',
+          paymentTxnRef: member.payment_txn_ref || member.paymentTxnRef || application?.payment_txn_ref || null,
+          paymentStatus: member.payment_status || member.paymentStatus || application?.payment_status || 'Pending Admin Verification',
+          accountStatus: member.account_status || member.accountStatus || 'Pending Verification',
+          kycStatus: member.kyc_status || member.kycStatus || 'Under Review',
+          availableBalance: member.available_balance || member.availableBalance || 0,
+          totalDeposits: member.total_deposits || member.totalDeposits || 0,
+          activeLoan: member.active_loan || member.activeLoan || 0,
+          joinedDate: member.joined_date || member.joinedDate || new Date().toISOString().split('T')[0]
+        };
+      });
+
+      return sendJson(res, 200, { success: true, members: enrichedMembers, total: enrichedMembers.length });
+    }
 
     // GET /api/members/:id
     if (pathname.startsWith('/api/members/') && method === 'GET') {

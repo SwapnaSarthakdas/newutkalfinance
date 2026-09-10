@@ -222,7 +222,7 @@ const OfficialMembershipForm = ({
           <div className="flex items-center gap-2 p-1 sm:p-1.5">
             <span className="font-bold text-slate-900 shrink-0">S/o. / D/o. / W/o</span>
             <span className="font-semibold text-slate-900 flex-1">
-              {d.fatherOrHusbandName || ''}
+              {d.fatherOrHusbandName || d.father_or_husband_name || d.fatherName || ''}
             </span>
           </div>
         </div>
@@ -398,7 +398,7 @@ const OfficialMembershipForm = ({
           {/* Street Address Line */}
           <div className="p-1 sm:p-1.5 border-b border-[#003E9E] min-h-[22px]">
             <span className="font-semibold text-slate-900">
-              {d.address || (isBlank ? '' : 'Plot 142, VIP Area, Saheed Nagar')}
+              {d.permanentAddress?.address || d.permanent_address || d.permAddress || d.address || (isBlank ? '' : 'Plot 142, VIP Area, Saheed Nagar')}
             </span>
           </div>
 
@@ -406,15 +406,15 @@ const OfficialMembershipForm = ({
           <div className="flex border-b border-[#003E9E] text-[9.5px] sm:text-[10.5px]">
             <div className="p-1 border-r border-[#003E9E] w-1/3">
               <span className="font-bold">Taluka: </span>
-              <span className="font-semibold">{d.taluka || d.city || ''}</span>
+              <span className="font-semibold">{d.permanentAddress?.taluka || d.permTaluka || d.taluka || d.city || ''}</span>
             </div>
             <div className="p-1 border-r border-[#003E9E] w-1/3">
               <span className="font-bold">District: </span>
-              <span className="font-semibold">{d.district || (isBlank ? '' : 'Khurda')}</span>
+              <span className="font-semibold">{d.permanentAddress?.district || d.permDistrict || d.district || (isBlank ? '' : 'Khurda')}</span>
             </div>
             <div className="p-1 w-1/3">
               <span className="font-bold">State: </span>
-              <span className="font-semibold">{d.state || (isBlank ? '' : 'Odisha')}</span>
+              <span className="font-semibold">{d.permanentAddress?.state || d.permState || d.state || (isBlank ? '' : 'Odisha')}</span>
             </div>
           </div>
 
@@ -422,19 +422,19 @@ const OfficialMembershipForm = ({
           <div className="flex text-[9.5px] sm:text-[10.5px]">
             <div className="p-1 border-r border-[#003E9E] w-1/4">
               <span className="font-bold">Pin Code: </span>
-              <span className="font-semibold">{d.pinCode || (isBlank ? '' : '751007')}</span>
+              <span className="font-semibold">{d.permanentAddress?.pinCode || d.permPinCode || d.pinCode || (isBlank ? '' : '751007')}</span>
             </div>
             <div className="p-1 border-r border-[#003E9E] w-1/4 truncate">
               <span className="font-bold">E-mail ID: </span>
-              <span className="font-semibold">{d.email || ''}</span>
+              <span className="font-semibold">{d.email || d.user?.email || ''}</span>
             </div>
             <div className="p-1 border-r border-[#003E9E] w-1/4">
               <span className="font-bold">Mo. No.: </span>
-              <span className="font-semibold">{d.phone || d.mobileNumber || ''}</span>
+              <span className="font-semibold">{d.mobileNumber || d.phone || d.mobile || ''}</span>
             </div>
             <div className="p-1 w-1/4">
               <span className="font-bold">PAN No.: </span>
-              <span className="font-semibold">{d.panNo || (isBlank ? '' : 'ABCDE1234F')}</span>
+              <span className="font-semibold">{d.panNo || d.pan_no || (isBlank ? '' : 'ABCDE1234F')}</span>
             </div>
           </div>
         </div>
@@ -529,21 +529,21 @@ const OfficialMembershipForm = ({
               <div className="flex items-center gap-4">
                 <div className="flex-1">
                   <span className="font-bold">Nominee : Mr. / Mrs. / Ms. </span>
-                  <span className="font-semibold">{d.nomineeName || (isBlank ? '' : 'Sunita')}</span>
+                  <span className="font-semibold">{d.nomineeName || d.nominee?.name || d.nominee_name || (isBlank ? '' : 'Sunita')}</span>
                 </div>
                 <div className="w-1/3">
                   <span className="font-bold">Last Name </span>
-                  <span className="font-semibold">{d.nomineeLastName || (isBlank ? '' : 'Sharma')}</span>
+                  <span className="font-semibold">{d.nomineeLastName || d.nominee?.lastName || (isBlank ? '' : 'Sharma')}</span>
                 </div>
               </div>
               <div className="flex items-center gap-4">
                 <div className="flex-1">
                   <span className="font-bold">Relationship : </span>
-                  <span className="font-semibold">{d.nomineeRelationship || (isBlank ? '' : 'Spouse')}</span>
+                  <span className="font-semibold">{d.nomineeRelationship || d.nominee?.relationship || d.nominee_relation || (isBlank ? '' : 'Spouse')}</span>
                 </div>
                 <div className="w-1/3">
                   <span className="font-bold">Age : </span>
-                  <span className="font-semibold">{d.nomineeAge || (isBlank ? '' : '32')}</span>
+                  <span className="font-semibold">{d.nomineeAge || d.nominee?.age || d.nominee_age || (isBlank ? '' : '32')}</span>
                 </div>
               </div>
             </div>
@@ -563,7 +563,7 @@ const OfficialMembershipForm = ({
               </span>
               <div className="flex items-center gap-1">
                 <span className="font-bold">Membership No.</span>
-                <DigitBoxes count={8} value={d.witnessMembershipNo || (isBlank ? '' : 'UF-1012')} />
+                <DigitBoxes count={8} value={d.witnessMembershipNo || d.witness?.membershipNumber || d.witness_membership_no || (isBlank ? '' : 'UF-1012')} />
               </div>
             </div>
 
@@ -572,7 +572,7 @@ const OfficialMembershipForm = ({
               <span className="font-bold w-36 shrink-0">Mr. / Mrs. / Miss</span>
               <DigitBoxes
                 count={28}
-                value={d.witnessName || (isBlank ? '' : 'PRADEEP KUMAR SAHOO')}
+                value={d.witnessName || d.witness?.name || d.witness_name || (isBlank ? '' : 'PRADEEP KUMAR SAHOO')}
                 className="w-full"
               />
             </div>
@@ -582,7 +582,7 @@ const OfficialMembershipForm = ({
               <span className="font-bold w-36 shrink-0">Correspondence Address</span>
               <DigitBoxes
                 count={28}
-                value={d.witnessAddress || (isBlank ? '' : 'KHANDAGIRI BHUBANESWAR')}
+                value={d.witnessAddress || d.witness?.address || d.witness_address || (isBlank ? '' : 'KHANDAGIRI BHUBANESWAR')}
                 className="w-full"
               />
             </div>
@@ -591,11 +591,11 @@ const OfficialMembershipForm = ({
             <div className="flex border-b border-[#003E9E]">
               <div className="flex items-center p-1 border-r border-[#003E9E] w-1/2">
                 <span className="font-bold w-20 shrink-0">District</span>
-                <DigitBoxes count={14} value={d.witnessDistrict || (isBlank ? '' : 'KHURDA')} />
+                <DigitBoxes count={14} value={d.witnessDistrict || d.witness?.district || d.witness_district || (isBlank ? '' : 'KHURDA')} />
               </div>
               <div className="flex items-center p-1 w-1/2">
                 <span className="font-bold w-16 shrink-0">State</span>
-                <DigitBoxes count={14} value={d.witnessState || (isBlank ? '' : 'ODISHA')} />
+                <DigitBoxes count={14} value={d.witnessState || d.witness?.state || d.witness_state || (isBlank ? '' : 'ODISHA')} />
               </div>
             </div>
 
@@ -603,11 +603,11 @@ const OfficialMembershipForm = ({
             <div className="flex">
               <div className="flex items-center p-1 border-r border-[#003E9E] w-1/2">
                 <span className="font-bold w-20 shrink-0">Pin Code</span>
-                <DigitBoxes count={6} value={d.witnessPin || (isBlank ? '' : '751030')} />
+                <DigitBoxes count={6} value={d.witnessPin || d.witnessPinCode || d.witness?.pinCode || (isBlank ? '' : '751030')} />
               </div>
               <div className="flex items-center p-1 w-1/2">
                 <span className="font-bold w-20 shrink-0">Mobile No.</span>
-                <DigitBoxes count={10} value={d.witnessMobile || (isBlank ? '' : '9861011223')} />
+                <DigitBoxes count={10} value={d.witnessMobile || d.witness?.mobileNumber || d.witness_mobile || (isBlank ? '' : '9861011223')} />
               </div>
             </div>
           </div>

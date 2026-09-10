@@ -136,6 +136,54 @@ export const FinanceProvider = ({ children }) => {
     addToast('All metrics and rosters reset to clean 0 state', 'info');
   };
 
+  // Synchronize members and applications from backend REST API on mount
+  useEffect(() => {
+    let isMounted = true;
+    const syncBackendData = async () => {
+      try {
+        const [appsRes, membersRes] = await Promise.allSettled([
+          api.applications.getAll(),
+          api.members.getAll()
+        ]);
+
+        if (isMounted && appsRes.status === 'fulfilled' && appsRes.value?.applications) {
+          const backendApps = appsRes.value.applications;
+          setApplications((prev) => {
+            const map = new Map();
+            prev.forEach((a) => map.set(a.id, a));
+            backendApps.forEach((a) => map.set(a.id, { ...(map.get(a.id) || {}), ...a }));
+            const merged = Array.from(map.values());
+            try {
+              localStorage.setItem('utkal_finance_applications_v2', JSON.stringify(merged));
+            } catch (e) {}
+            return merged;
+          });
+        }
+
+        if (isMounted && membersRes.status === 'fulfilled' && membersRes.value?.members) {
+          const backendMembers = membersRes.value.members;
+          setMembers((prev) => {
+            const map = new Map();
+            prev.forEach((m) => map.set(m.id, m));
+            backendMembers.forEach((m) => map.set(m.id, { ...(map.get(m.id) || {}), ...m }));
+            const merged = Array.from(map.values());
+            try {
+              localStorage.setItem('utkal_finance_members_v2', JSON.stringify(merged));
+            } catch (e) {}
+            return merged;
+          });
+        }
+      } catch (err) {
+        console.warn('Backend sync fallback to local storage:', err.message);
+      }
+    };
+
+    syncBackendData();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   // Sync to localStorage
   useEffect(() => {
     localStorage.setItem('utkal_finance_members_v2', JSON.stringify(members));
@@ -174,31 +222,94 @@ export const FinanceProvider = ({ children }) => {
       membershipId: newId,
       empId: memberData.empId || memberData.emp_id || '',
       name: memberData.name || memberData.fullName,
+      fullName: memberData.fullName || memberData.name,
+      title: memberData.title || 'Mr.',
+      firstName: memberData.firstName || '',
+      middleName: memberData.middleName || '',
+      lastName: memberData.lastName || '',
+      fatherOrHusbandName: memberData.fatherOrHusbandName || memberData.father_or_husband_name || '',
+      guardianType: memberData.guardianType || memberData.guardian_type || 'S/o.',
       email: memberData.email,
       phone: memberData.phone || memberData.mobileNumber,
+      mobileNumber: memberData.mobileNumber || memberData.phone,
+      alternateMobile: memberData.alternateMobile || memberData.alternate_mobile || '',
       password: memberData.password || 'member123',
-      gender: memberData.gender || 'Not specified',
+      gender: memberData.gender || 'Male',
       dob: memberData.dob || memberData.dateOfBirth || '1995-01-01',
-      address: memberData.address || '',
-      city: memberData.city || 'Bhubaneswar',
-      state: memberData.state || 'Odisha',
-      pinCode: memberData.pinCode || '751001',
+      age: memberData.age || 29,
+      maritalStatus: memberData.maritalStatus || memberData.marital_status || 'Married',
+      religion: memberData.religion || 'Hindu',
+      category: memberData.category || 'General',
+      education: memberData.education || 'Graduate / P.G.',
       occupation: memberData.occupation || 'Professional',
-      nomineeName: memberData.nomineeName || '',
-      nomineeRelationship: memberData.nomineeRelationship || '',
-      accountStatus: 'Active',
-      kycStatus: 'Verified',
-      joinedDate: new Date().toISOString().split('T')[0],
-      availableBalance: memberData.initialDeposit ? Number(memberData.initialDeposit) : 25000,
-      totalDeposits: 0,
-      activeLoan: 0,
+      panNo: memberData.panNo || memberData.pan_no || '',
+      address: memberData.address || memberData.permanentAddress?.address || '',
+      city: memberData.city || memberData.permanentAddress?.district || 'Bhubaneswar',
+      taluka: memberData.taluka || memberData.permanentAddress?.taluka || '',
+      district: memberData.district || memberData.permanentAddress?.district || 'Khurda',
+      state: memberData.state || memberData.permanentAddress?.state || 'Odisha',
+      pinCode: memberData.pinCode || memberData.permanentAddress?.pinCode || '751001',
+      permanentAddress: memberData.permanentAddress || {
+        address: memberData.address || '',
+        taluka: memberData.taluka || '',
+        district: memberData.district || 'Khurda',
+        state: memberData.state || 'Odisha',
+        pinCode: memberData.pinCode || '751001'
+      },
+      correspondenceAddress: memberData.correspondenceAddress || {
+        address: memberData.address || '',
+        district: memberData.district || 'Khurda',
+        state: memberData.state || 'Odisha',
+        pinCode: memberData.pinCode || '751001',
+        mobileNumber: memberData.phone || memberData.mobileNumber || ''
+      },
+      branchId: memberData.branchId || 'BR-001',
+      branchName: memberData.branchName || memberData.branch_name || 'Bhubaneswar HQ',
+      branchCode: memberData.branchCode || memberData.branch_code || '075101',
+      associateId: memberData.associateId || 'ASC-001',
+      associateName: memberData.associateName || memberData.associate_name || 'Pradeep Kumar Jena',
+      associateCode: memberData.associateCode || memberData.associate_code || 'UTK-ASC-101',
+      nominee: memberData.nominee || null,
+      nomineeName: memberData.nomineeName || memberData.nominee?.name || '',
+      nomineeRelationship: memberData.nomineeRelationship || memberData.nominee?.relationship || '',
+      nomineeAge: memberData.nomineeAge || memberData.nominee?.age || '',
+      nomineeAddress: memberData.nomineeAddress || memberData.nominee?.address || '',
+      witness: memberData.witness || null,
+      witnessName: memberData.witnessName || memberData.witness?.name || '',
+      witnessIsMember: memberData.witnessIsMember ?? memberData.witness?.isMember ?? false,
+      witnessMembershipNo: memberData.witnessMembershipNo || memberData.witness?.membershipNumber || '',
+      witnessMobile: memberData.witnessMobile || memberData.witness?.mobileNumber || '',
+      witnessAddress: memberData.witnessAddress || memberData.witness?.address || '',
+      witnessDistrict: memberData.witnessDistrict || memberData.witness?.district || '',
+      witnessState: memberData.witnessState || memberData.witness?.state || '',
+      witnessPinCode: memberData.witnessPinCode || memberData.witness?.pinCode || '',
+      shareCount: Number(memberData.shareCount) || 10,
+      repaymentMode: memberData.repaymentMode || 'First depositor',
+      taxDeduction: memberData.taxDeduction || 'No',
+      form15g: memberData.form15g ?? true,
+      documents: memberData.documents || [],
+      primaryDocType: memberData.primaryDocType || 'Aadhaar Card',
+      primaryDocNumber: memberData.primaryDocNumber || '',
+      signatureData: memberData.signatureData || memberData.signature || null,
+      signature: memberData.signature || memberData.signatureData || null,
+      signatureDate: memberData.signatureDate || new Date().toISOString().split('T')[0],
+      paymentMethod: memberData.paymentMethod || memberData.payment_method || 'UPI',
+      paymentTxnRef: memberData.paymentTxnRef || memberData.payment_txn_ref || null,
+      paymentAmount: memberData.paymentAmount || memberData.payment_amount || 200,
+      paymentStatus: memberData.paymentStatus || memberData.payment_status || 'Pending Admin Verification',
+      accountStatus: memberData.accountStatus || 'Pending Verification',
+      kycStatus: memberData.kycStatus || 'Under Review',
+      joinedDate: memberData.joinedDate || new Date().toISOString().split('T')[0],
+      availableBalance: memberData.availableBalance ?? (memberData.initialDeposit ? Number(memberData.initialDeposit) : 0),
+      totalDeposits: memberData.totalDeposits ?? (memberData.paymentStatus === 'Payment Successful' ? 200 : 0),
+      activeLoan: memberData.activeLoan ?? 0,
       nextPayment: 0,
       nextPaymentDate: null,
       avatar: memberData.avatar || `https://images.unsplash.com/photo-${1500000000000 + Math.floor(Math.random() * 1000000)}?w=150&auto=format&fit=crop&q=80`
     };
 
     setMembers((prev) => {
-      const updated = [newMember, ...prev];
+      const updated = [newMember, ...prev.filter((m) => m.id !== newId)];
       try {
         localStorage.setItem('utkal_finance_members_v2', JSON.stringify(updated));
       } catch (err) {
@@ -212,7 +323,7 @@ export const FinanceProvider = ({ children }) => {
       id: `notif-${Date.now()}`,
       target: 'admin',
       title: 'New Member Registered',
-      message: `${newMember.name} (${newMember.id}) joined Utkal Finance.`,
+      message: `${newMember.name} (${newMember.id}) applied for membership. Status: ${newMember.accountStatus}.`,
       time: 'Just now',
       read: false,
       type: 'member',
@@ -530,15 +641,21 @@ export const FinanceProvider = ({ children }) => {
       ...appData,
       id: appId,
       status: appData.status || 'Submitted',
-      membership_fee: 200,
-      payment_amount: 200,
+      membership_fee: appData.membership_fee || 200,
+      payment_amount: appData.payment_amount || 200,
       payment_status: appData.payment_status || 'Pending Admin Verification',
-      payment_method: appData.payment_method || 'UPI',
-      payment_txn_ref: appData.payment_txn_ref || `UTR${Date.now().toString().slice(-8)}`,
-      created_at: appData.created_at || new Date().toISOString(),
+      payment_method: appData.payment_method || appData.paymentMethod || 'UPI',
+      payment_txn_ref: appData.payment_txn_ref || appData.paymentTxnRef || `UTR${Date.now().toString().slice(-8)}`,
+      created_at: appData.created_at || new Date().toISOString()
     };
 
-    setApplications((prev) => [newApp, ...prev.filter(a => a.id !== appId)]);
+    setApplications((prev) => {
+      const updated = [newApp, ...prev.filter((a) => a.id !== appId)];
+      try {
+        localStorage.setItem('utkal_finance_applications_v2', JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
 
     // Dispatch Admin Notification for incoming payment verification request
     const notif = {
@@ -601,21 +718,28 @@ export const FinanceProvider = ({ children }) => {
           if (m.id === allocatedMemberId || (targetApp?.email && m.email === targetApp?.email)) {
             return {
               ...m,
+              ...(targetApp?.member || {}),
+              ...targetApp,
               id: allocatedMemberId,
               membershipId: allocatedMemberId,
               accountStatus: 'Active',
               kycStatus: 'Verified',
               emp_id: empId,
-              empId: empId
+              empId: empId,
+              totalDeposits: Math.max(m.totalDeposits || 0, 200),
+              availableBalance: Math.max(m.availableBalance || 0, 25000)
             };
           }
           return m;
         });
       } else {
         const newMem = {
+          ...(targetApp?.member || {}),
+          ...targetApp,
           id: allocatedMemberId,
           membershipId: allocatedMemberId,
           emp_id: empId,
+          empId: empId,
           name: applicantName,
           fullName: applicantName,
           email: targetApp?.user?.email || targetApp?.email || `${allocatedMemberId.toLowerCase()}@utkalfinance.com`,
@@ -626,7 +750,7 @@ export const FinanceProvider = ({ children }) => {
           availableBalance: 25000,
           totalDeposits: 200,
           activeLoan: 0,
-          branchName: targetApp?.branchName || 'Bhubaneswar HQ'
+          branchName: targetApp?.branchName || targetApp?.member?.branch_name || 'Bhubaneswar HQ'
         };
         return [newMem, ...prev];
       }
