@@ -5,7 +5,6 @@ import {
   Phone,
   MapPin,
   FileText,
-  Search,
   Bell,
   LogIn,
   User,
@@ -32,21 +31,14 @@ const Navbar = ({ onNavigate, currentPage = 'home' }) => {
   const { user, role, logout } = useAuth();
 
   // Navigation & Dropdown states
-  const [activeSegment, setActiveSegment] = useState('personal'); // 'personal' | 'business' | 'nri' | 'micro'
-  const [activeMegaMenu, setActiveMegaMenu] = useState(null); // category id or null
   const [loginDropdownOpen, setLoginDropdownOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [searchModalOpen, setSearchModalOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
   const [locateModalOpen, setLocateModalOpen] = useState(false);
   const [complaintModalOpen, setComplaintModalOpen] = useState(false);
 
-  const megaMenuTimeoutRef = useRef(null);
-
   const handleNav = (routeId) => {
     setMobileMenuOpen(false);
-    setActiveMegaMenu(null);
     setLoginDropdownOpen(false);
     if (onNavigate) {
       onNavigate(routeId);
@@ -102,27 +94,6 @@ const Navbar = ({ onNavigate, currentPage = 'home' }) => {
     }
   ];
 
-  // Quick search directory
-  const searchableLinks = [
-    { title: 'Open Savings Account', category: 'Savings', route: 'register' },
-    { title: 'Fixed Deposit Rates (8.25%)', category: 'Deposits', route: 'calculator' },
-    { title: 'Home Loan EMI Calculator', category: 'Calculators', route: 'calculator' },
-    { title: 'MSME Business Loan', category: 'Loans', route: 'calculator' },
-    { title: 'Gold Loan per Gram Rate', category: 'Loans', route: 'calculator' },
-    { title: 'Download Membership Form (PDF)', category: 'Forms', route: 'membership-form' },
-    { title: 'Corporate Brochure & Handover Document', category: 'Brochure', route: 'brochure' },
-    { title: 'Registered Office Address (Nayapalli, Bhubaneswar)', category: 'Contact', route: 'contact' },
-    { title: 'Administrator Console Login', category: 'Admin', route: 'admin-login' },
-    { title: 'Admin Governance Dashboard', category: 'Admin', route: 'admin-dashboard' },
-  ];
-
-  const filteredSearch = searchQuery.trim() === ''
-    ? searchableLinks
-    : searchableLinks.filter(item =>
-        item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.category.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-
   return (
     <>
       <header className="fixed top-0 left-0 right-0 z-50 w-full shadow-md select-none">
@@ -141,69 +112,48 @@ const Navbar = ({ onNavigate, currentPage = 'home' }) => {
                 <Logo size="md" stackedOnMobile={true} />
               </div>
 
-              {/* Segment Navigation (Personal, Business, NRI, Micro Banking, etc.) */}
-              <nav className="hidden xl:flex items-center gap-1 2xl:gap-2">
-                <button
-                  onClick={() => handleNav('home')}
-                  className={`px-3 py-1.5 rounded-lg text-xs 2xl:text-sm font-bold transition-all ${
-                    currentPage === 'home'
-                      ? 'bg-finance-50 text-finance-600 font-extrabold border-b-2 border-finance-600 shadow-2xs'
-                      : 'text-slate-700 hover:text-finance-600 hover:bg-slate-50'
-                  }`}
-                >
-                  Personal
-                </button>
+              {/* Main Navigation Links */}
+              <nav className="hidden xl:flex items-center gap-1.5 2xl:gap-3">
                 <button
                   onClick={() => handleNav('about')}
-                  className="px-2.5 py-1.5 text-xs 2xl:text-sm font-semibold text-slate-700 hover:text-finance-600 transition-colors"
+                  className={`px-3 py-1.5 rounded-lg text-xs 2xl:text-sm font-semibold transition-all whitespace-nowrap ${currentPage === 'about'
+                    ? 'text-finance-600 font-bold bg-finance-50'
+                    : 'text-slate-700 hover:text-finance-600 hover:bg-slate-50'
+                    }`}
                 >
                   About Us
                 </button>
                 <button
                   onClick={() => handleNav('register')}
-                  className={`px-2.5 py-1.5 text-xs 2xl:text-sm font-bold transition-all flex items-center gap-1.5 ${
-                    currentPage === 'register'
-                      ? 'bg-finance-50 text-finance-600 font-extrabold border-b-2 border-finance-600 shadow-2xs'
-                      : 'text-finance-600 hover:bg-finance-50/80'
-                  }`}
+                  className={`px-3 py-1.5 rounded-lg text-xs 2xl:text-sm font-semibold transition-all whitespace-nowrap ${currentPage === 'register'
+                    ? 'text-finance-600 font-bold bg-finance-50'
+                    : 'text-slate-700 hover:text-finance-600 hover:bg-slate-50'
+                    }`}
                 >
-                  <UserPlus className="w-3.5 h-3.5" />
-                  <span>Become a Member</span>
-                  <span className="text-[9.5px] px-1.5 py-0.2 rounded-full font-bold bg-amber-100 text-amber-800 border border-amber-200">
-                    ₹200
-                  </span>
-                </button>
-                <button
-                  onClick={() => handleNav('membership-form')}
-                  className="px-2.5 py-1.5 text-xs 2xl:text-sm font-semibold text-slate-700 hover:text-finance-600 transition-colors flex items-center gap-1"
-                >
-                  <span>Statutory Form</span>
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                  Become a Member
                 </button>
                 <button
                   onClick={() => handleNav('brochure')}
-                  className="px-2.5 py-1.5 text-xs 2xl:text-sm font-semibold text-slate-700 hover:text-finance-600 transition-colors"
+                  className={`px-3 py-1.5 rounded-lg text-xs 2xl:text-sm font-semibold transition-all whitespace-nowrap ${currentPage === 'brochure'
+                    ? 'text-finance-600 font-bold bg-finance-50'
+                    : 'text-slate-700 hover:text-finance-600 hover:bg-slate-50'
+                    }`}
                 >
                   Brochure
                 </button>
                 <button
                   onClick={() => handleNav('contact')}
-                  className="px-2.5 py-1.5 text-xs 2xl:text-sm font-semibold text-slate-700 hover:text-finance-600 transition-colors"
+                  className={`px-3 py-1.5 rounded-lg text-xs 2xl:text-sm font-semibold transition-all whitespace-nowrap ${currentPage === 'contact'
+                    ? 'text-finance-600 font-bold bg-finance-50'
+                    : 'text-slate-700 hover:text-finance-600 hover:bg-slate-50'
+                    }`}
                 >
                   Help &amp; Support
                 </button>
               </nav>
 
-              {/* Right Action Cluster: Search, Notifications, Become a Member & Login Dropdown */}
+              {/* Right Action Cluster: Notifications, Join CTA & Admin */}
               <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-                {/* Search Button */}
-                <button
-                  onClick={() => setSearchModalOpen(true)}
-                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-slate-200 bg-slate-50 hover:bg-slate-100 flex items-center justify-center text-slate-600 hover:text-finance-600 transition-colors cursor-pointer"
-                  title="Search Services, Rates & Products"
-                >
-                  <Search className="w-4 h-4" />
-                </button>
 
                 {/* Notifications Bell */}
                 <div className="relative">
@@ -217,7 +167,7 @@ const Navbar = ({ onNavigate, currentPage = 'home' }) => {
                   </button>
 
                   {notificationsOpen && (
-                    <div 
+                    <div
                       className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-slate-200 p-4 z-50 animate-in fade-in"
                       onMouseLeave={() => setNotificationsOpen(false)}
                     >
@@ -259,15 +209,14 @@ const Navbar = ({ onNavigate, currentPage = 'home' }) => {
                   )}
                 </div>
 
-                {/* Primary CTA: Become a Member */}
+                {/* Primary CTA: Join */}
                 <button
                   onClick={() => handleNav('register')}
-                  className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-[#003E9E] via-[#0A3F9F] to-finance-700 hover:from-[#002E78] hover:to-finance-800 text-white text-xs sm:text-sm font-bold shadow-md hover:shadow-lg transition-all cursor-pointer shrink-0"
+                  className="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-[#003E9E] via-[#0A3F9F] to-finance-700 hover:from-[#002E78] hover:to-finance-800 text-white text-xs sm:text-sm font-bold shadow-md hover:shadow-lg transition-all cursor-pointer shrink-0"
                   title="Apply for Statutory Associate Membership (Fee: ₹200)"
                 >
                   <UserPlus className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-300 shrink-0" />
-                  <span className="hidden xs:inline">Become a Member</span>
-                  <span className="xs:hidden">Join</span>
+                  <span>Join</span>
                 </button>
 
                 {/* Authenticated Admin Portal or Admin Login */}
@@ -399,68 +348,6 @@ const Navbar = ({ onNavigate, currentPage = 'home' }) => {
         )}
       </header>
 
-      {/* ========================================================================= */}
-      {/* SEARCH MODAL DIALOG                                                       */}
-      {/* ========================================================================= */}
-      {searchModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-start justify-center pt-20 px-4">
-          <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95">
-            <div className="p-4 sm:p-6 border-b border-slate-100 flex items-center gap-3">
-              <Search className="w-5 h-5 text-finance-600 flex-shrink-0" />
-              <input
-                type="text"
-                autoFocus
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search banking products, interest rates, loans, calculators..."
-                className="w-full text-sm sm:text-base outline-hidden text-slate-900 placeholder-slate-400 font-medium"
-              />
-              <button
-                onClick={() => setSearchModalOpen(false)}
-                className="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="p-4 sm:p-6 max-h-96 overflow-y-auto space-y-2">
-              <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                {searchQuery ? `Search Results (${filteredSearch.length})` : 'Popular Searches'}
-              </div>
-              {filteredSearch.length > 0 ? (
-                filteredSearch.map((item, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => {
-                      setSearchModalOpen(false);
-                      handleNav(item.route);
-                    }}
-                    className="w-full text-left p-3 rounded-xl hover:bg-slate-50 border border-transparent hover:border-slate-200 flex items-center justify-between transition-colors group"
-                  >
-                    <div>
-                      <div className="font-bold text-slate-900 text-xs sm:text-sm group-hover:text-finance-600">
-                        {item.title}
-                      </div>
-                      <span className="text-[10px] text-slate-400 font-semibold bg-slate-100 px-2 py-0.5 rounded mt-1 inline-block">
-                        {item.category}
-                      </span>
-                    </div>
-                    <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-finance-600 group-hover:translate-x-1 transition-all" />
-                  </button>
-                ))
-              ) : (
-                <div className="text-center py-8 text-slate-500 text-xs">
-                  No matching banking products found. Try searching for "Loan", "FD", or "Form".
-                </div>
-              )}
-            </div>
-
-            <div className="p-3 bg-slate-50 border-t border-slate-100 text-center text-xs text-slate-500">
-              Press ESC or click outside to dismiss
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ========================================================================= */}
       {/* BRANCH LOCATOR MODAL                                                      */}

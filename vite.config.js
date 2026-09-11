@@ -31,10 +31,20 @@ export default defineConfig({
     host: true,
     port: 5173,
     strictPort: false,
+    watch: {
+      usePolling: true,
+      interval: 100,
+    },
+    headers: {
+      'Cache-Control': 'no-store, no-cache, must-revalidate',
+    },
   },
   preview: {
     host: true,
     port: 5173,
     strictPort: false,
+    headers: {
+      'Cache-Control': 'no-store, no-cache, must-revalidate',
+    },
   }
 })
