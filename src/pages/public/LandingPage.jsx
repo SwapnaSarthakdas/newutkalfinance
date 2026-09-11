@@ -236,7 +236,9 @@ const LandingPage = ({ onNavigate }) => {
       features: ['Zero Balance BSBDA Available', 'Instant Digital Passbook', 'Unlimited UPI & ATM Usage', 'Quarterly Interest Payout'],
       badge: 'High Liquidity',
       actionText: 'Open Savings Account',
-      actionRoute: 'register'
+      actionRoute: 'register',
+      bgImage: '/savings-ai-bg.jpg',
+      overlay: 'from-blue-950/90 via-blue-900/60 to-blue-950/70'
     },
     {
       title: 'Deposits (FD & RD)',
@@ -247,7 +249,9 @@ const LandingPage = ({ onNavigate }) => {
       features: ['Safe DICGC Insurance Cover', 'Compounded Quarterly Returns', 'Tenures from 7 Days to 10 Yrs', 'Tax Saver 80C Options'],
       badge: 'Guaranteed Returns',
       actionText: 'Book Fixed Deposit',
-      actionRoute: 'calculator'
+      actionRoute: 'calculator',
+      bgImage: '/deposits-ai-bg.jpg',
+      overlay: 'from-amber-950/92 via-amber-900/65 to-orange-950/75'
     },
     {
       title: 'Loans & Advances',
@@ -258,7 +262,9 @@ const LandingPage = ({ onNavigate }) => {
       features: ['Home Loan & Griha Sudhar', 'MSME Working Capital', 'Instant Gold Loan Valuation', 'Minimal KYC Documentation'],
       badge: 'Quick Approval',
       actionText: 'Apply For Loan',
-      actionRoute: 'calculator'
+      actionRoute: 'calculator',
+      bgImage: '/loans-ai-bg.jpg',
+      overlay: 'from-purple-950/92 via-purple-900/65 to-violet-950/75'
     },
     {
       title: 'Insurance & Investments',
@@ -269,7 +275,9 @@ const LandingPage = ({ onNavigate }) => {
       features: ['Family Term Life Insurance', 'Cashless Health Hospitalisation', 'Atal Pension Yojana (APY)', 'Dedicated Advisory Desk'],
       badge: 'Family Security',
       actionText: 'Explore Coverage',
-      actionRoute: 'services'
+      actionRoute: 'services',
+      bgImage: '/insurance-ai-bg.jpg',
+      overlay: 'from-emerald-950/92 via-teal-950/65 to-emerald-900/75'
     }
   ];
 
@@ -537,6 +545,18 @@ const LandingPage = ({ onNavigate }) => {
                 >
                   {/* Card Header with Distinctive Gradient & Icon */}
                   <div className={`p-6 bg-gradient-to-br ${prod.color} text-white relative overflow-hidden`}>
+                    {/* Background AI Image */}
+                    {prod.bgImage && (
+                      <>
+                        <img
+                          src={prod.bgImage}
+                          alt={prod.title}
+                          className="absolute inset-0 w-full h-full object-cover object-center opacity-75 group-hover:scale-110 transition-transform duration-700 ease-out pointer-events-none"
+                        />
+                        <div className={`absolute inset-0 bg-gradient-to-t ${prod.overlay || 'from-slate-950/90 via-slate-900/60 to-slate-950/70'} pointer-events-none`} />
+                      </>
+                    )}
+
                     <div className="flex items-center justify-between relative z-10">
                       <div className="w-12 h-12 rounded-xl bg-white/15 backdrop-blur-xs flex items-center justify-center text-white border border-white/20 group-hover:scale-110 transition-transform">
                         <Icon className="w-6 h-6" />
