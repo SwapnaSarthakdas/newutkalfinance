@@ -83,7 +83,8 @@ const LandingPage = ({ onNavigate }) => {
     {
       id: 'fd-rate',
       tag: 'Special Festive Interest Rates',
-      tagColor: 'bg-amber-400/20 text-amber-300 border-amber-400/30',
+      tagColor: 'bg-amber-100 text-amber-900 border-amber-300',
+      dotColor: 'bg-amber-500',
       title: 'Secure Your Future with High-Yield Fixed Deposits',
       subtitle: 'Earn up to 8.25%* p.a. on Fixed Deposits & 8.50%* p.a. for Senior Citizens. Safe compounding with quarterly interest payout directly to your account.',
       badge: 'DICGC Insured & Regulated',
@@ -100,12 +101,16 @@ const LandingPage = ({ onNavigate }) => {
         { label: 'Senior Citizens', val: '8.50% p.a.' },
         { label: 'Tenure', val: '7 Days - 10 Yrs' }
       ],
-      gradient: 'from-[#0B1528] via-[#1A2340] to-[#2A164D]'
+      gradient: 'from-[#FFFDF7] via-[#F6F9FE] to-[#EEF5FF]',
+      image: '/fd-banner.jpg',
+      imageAlt: 'Secure Your Future with High-Yield Fixed Deposits',
+      cardBadge: 'Safe Growth & High Yield'
     },
     {
       id: 'savings-acc',
       tag: 'Zero Balance & Digital Passbook',
-      tagColor: 'bg-emerald-400/20 text-emerald-300 border-emerald-400/30',
+      tagColor: 'bg-emerald-100 text-emerald-900 border-emerald-300',
+      dotColor: 'bg-emerald-500',
       title: 'Make Life Easier with Digital Savings Accounts',
       subtitle: 'Open an Instant High-Interest Savings Account with up to 7.50%* returns credited quarterly. Complete zero-balance facility with instant digital passbook and doorstep banking support.',
       badge: '100% Paperless Opening',
@@ -118,12 +123,16 @@ const LandingPage = ({ onNavigate }) => {
         { label: 'Min. Balance', val: '₹0 (Zero)' },
         { label: 'Passbook', val: 'Digital Passbook' }
       ],
-      gradient: 'from-[#111827] via-[#0D2447] to-[#1E1B4B]'
+      gradient: 'from-[#F5FBF7] via-[#F4F9FD] to-[#EAF4FF]',
+      image: '/savings-banner.jpg',
+      imageAlt: 'Zero Balance Digital Savings Accounts',
+      cardBadge: 'Zero Balance • Digital'
     },
     {
       id: 'loans',
       tag: 'Fast-Track Credit Solutions',
-      tagColor: 'bg-blue-400/20 text-blue-300 border-blue-400/30',
+      tagColor: 'bg-blue-100 text-blue-900 border-blue-300',
+      dotColor: 'bg-blue-600',
       title: 'Turn Your Ambitions Into Reality with Low EMI Loans',
       subtitle: 'Fast-track MSME Business Loans, Home Loans & Gold Loans up to ₹10 Crores. Minimal paperwork, transparent underwriting, and disbursal within 24 to 48 hours.',
       badge: 'Zero Hidden Processing Fees',
@@ -140,12 +149,16 @@ const LandingPage = ({ onNavigate }) => {
         { label: 'EMI Starts', val: '₹740 / Lakh' },
         { label: 'Disbursal', val: '24-48 Hours' }
       ],
-      gradient: 'from-[#1A102F] via-[#241744] to-[#0A2540]'
+      gradient: 'from-[#F0F5FF] via-[#F6FAFF] to-[#E9F1FE]',
+      image: '/ambition-loans-banner.jpg',
+      imageAlt: 'Turn Your Ambitions Into Reality with Low EMI Loans',
+      cardBadge: 'Low EMI • Fast Disbursal'
     },
     {
       id: 'digital-banking',
       tag: 'Next-Gen Banking Experience',
-      tagColor: 'bg-purple-400/20 text-purple-300 border-purple-400/30',
+      tagColor: 'bg-purple-100 text-purple-900 border-purple-300',
+      dotColor: 'bg-purple-600',
       title: 'Utkal Digital & WhatsApp Banking at Your Fingertips',
       subtitle: 'Experience 24/7 financial control. Check account balances, transfer funds via UPI, pay bills via Bharat Connect, and get instant receipts on WhatsApp.',
       badge: '256-Bit Bank Encryption',
@@ -158,7 +171,10 @@ const LandingPage = ({ onNavigate }) => {
         { label: 'WhatsApp Desk', val: '+91 9776175240' },
         { label: 'Security', val: 'SHA-256 SSL' }
       ],
-      gradient: 'from-[#2A0845] via-[#1B1464] to-[#0B1528]'
+      gradient: 'from-[#FBF8FF] via-[#F5F7FF] to-[#EBF0FF]',
+      image: '/utkal-tower.jpg',
+      imageAlt: 'Utkal Digital & WhatsApp Banking',
+      cardBadge: '24x7 Digital Desk'
     }
   ];
 
@@ -294,41 +310,39 @@ const LandingPage = ({ onNavigate }) => {
       {/* SECTION 1: HIGH-IMPACT HERO BANNER CAROUSEL (Utkarsh Bank Style)           */}
       {/* ========================================================================= */}
       <section
-        className="relative overflow-hidden bg-slate-950 text-white select-none"
+        className="relative overflow-hidden bg-gradient-to-b from-[#F0F5FF] via-[#F8FAFD] to-[#EDF3FA] text-slate-900 select-none border-b border-slate-200/80"
         onMouseEnter={() => setIsCarouselPaused(true)}
         onMouseLeave={() => setIsCarouselPaused(false)}
       >
-        {/* Background Gradient & Watermark Overlay */}
-        <div className={`absolute inset-0 bg-gradient-to-br ${activeSlide.gradient} opacity-95 transition-all duration-700`} />
-        
-        {/* Subtle blurred banner overlay */}
-        <div className="absolute inset-0 opacity-15 pointer-events-none overflow-hidden">
-          <img src="/banner.jpg" alt="" className="w-full h-full object-cover filter blur-xl scale-110" />
-        </div>
+        {/* Subtle Geometric Dot Mesh & Ambient Bank Glows */}
+        <div className="absolute inset-0 bg-[radial-gradient(#003E9E_1px,transparent_1px)] [background-size:24px_24px] opacity-[0.035] pointer-events-none" />
+        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-blue-400/15 blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-amber-400/10 blur-3xl pointer-events-none" />
+        <div className="absolute top-1/2 right-1/4 -translate-y-1/2 w-[520px] h-[520px] rounded-full bg-sky-200/30 blur-3xl pointer-events-none" />
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-20 lg:py-24 relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16 lg:py-20 relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
             {/* Left Slide Copy */}
-            <div className="lg:col-span-8 space-y-5 text-center lg:text-left animate-in fade-in duration-500 key={currentSlide}">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider border shadow-xs">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping flex-shrink-0" />
+            <div className="lg:col-span-7 space-y-5 text-center lg:text-left animate-in fade-in duration-500" key={`slide-text-${currentSlide}`}>
+              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider border shadow-xs bg-white/80 backdrop-blur-xs">
+                <span className={`w-2 h-2 rounded-full ${activeSlide.dotColor || 'bg-emerald-500'} animate-ping flex-shrink-0`} />
                 <span className={activeSlide.tagColor}>{activeSlide.tag}</span>
               </div>
 
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl 2xl:text-6xl font-black text-white tracking-tight leading-[1.15]">
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl 2xl:text-6xl font-black text-slate-900 tracking-tight leading-[1.15]">
                 {activeSlide.title}
               </h1>
 
-              <p className="text-sm sm:text-base lg:text-lg text-slate-200 leading-relaxed max-w-2xl mx-auto lg:mx-0">
+              <p className="text-sm sm:text-base lg:text-lg text-slate-600 font-normal leading-relaxed max-w-2xl mx-auto lg:mx-0">
                 {activeSlide.subtitle}
               </p>
 
               {/* Stats Highlights on Slide */}
               <div className="grid grid-cols-3 gap-3 pt-2 max-w-lg mx-auto lg:mx-0 text-left">
                 {activeSlide.stats.map((st, sIdx) => (
-                  <div key={sIdx} className="p-2.5 sm:p-3 rounded-xl bg-white/10 backdrop-blur-xs border border-white/15">
-                    <div className="text-[10px] sm:text-xs text-slate-300 font-medium">{st.label}</div>
-                    <div className="text-sm sm:text-base font-extrabold text-amber-300 font-mono mt-0.5">{st.val}</div>
+                  <div key={sIdx} className="p-2.5 sm:p-3 rounded-2xl bg-white shadow-xs border border-slate-200/80 backdrop-blur-xs hover:border-blue-200 transition-colors">
+                    <div className="text-[10px] sm:text-xs text-slate-500 font-semibold uppercase tracking-wider">{st.label}</div>
+                    <div className="text-sm sm:text-base font-extrabold text-[#003E9E] font-mono mt-0.5">{st.val}</div>
                   </div>
                 ))}
               </div>
@@ -337,7 +351,7 @@ const LandingPage = ({ onNavigate }) => {
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center lg:justify-start gap-3 pt-4">
                 <button
                   onClick={activeSlide.primaryAction}
-                  className="px-6 py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs sm:text-sm uppercase tracking-wider shadow-xl shadow-amber-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                  className="px-6 py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs sm:text-sm uppercase tracking-wider shadow-lg shadow-amber-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
                 >
                   <span>{activeSlide.primaryBtnText}</span>
                   <ArrowRight className="w-4 h-4" />
@@ -345,75 +359,67 @@ const LandingPage = ({ onNavigate }) => {
 
                 <button
                   onClick={activeSlide.secondaryAction}
-                  className="px-5 py-3.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs sm:text-sm uppercase tracking-wider border border-white/25 backdrop-blur-xs transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                  className="px-5 py-3.5 rounded-xl bg-white hover:bg-slate-50 text-slate-800 font-bold text-xs sm:text-sm uppercase tracking-wider border border-slate-300 hover:border-slate-400 shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
                 >
                   <span>{activeSlide.secondaryBtnText}</span>
-                  <ChevronRight className="w-4 h-4 text-slate-300" />
+                  <ChevronRight className="w-4 h-4 text-slate-500" />
                 </button>
               </div>
             </div>
 
-            {/* Right Card / Interactive Visual */}
-            <div className="lg:col-span-4 hidden lg:block">
-              <div className="bg-white/10 backdrop-blur-md rounded-3xl p-6 border border-white/20 shadow-2xl text-white relative">
-                <div className="flex items-center justify-between pb-4 border-b border-white/10">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-10 h-10 rounded-xl bg-white p-0.5 flex items-center justify-center">
-                      <img src="/logo.jpg" alt="Utkal" className="w-full h-full object-contain" />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-sm">New Utkal Finance Limited</h4>
-                      <p className="text-[10px] text-slate-300">Certified by Govt. of India</p>
-                    </div>
-                  </div>
-                  <span className="text-[10px] font-mono text-amber-300 bg-amber-400/20 px-2 py-0.5 rounded-full font-bold">
-                    ODISHA HQ
-                  </span>
-                </div>
+            {/* Right Card / Interactive Visual with Generated High-Impact Image */}
+            <div className="lg:col-span-5" key={`slide-image-${currentSlide}`}>
+              <div className="relative rounded-3xl overflow-hidden border border-slate-200/90 shadow-2xl shadow-blue-950/15 bg-white group aspect-[4/3] sm:aspect-[16/11]">
+                <img
+                  src={activeSlide.image}
+                  alt={activeSlide.imageAlt || activeSlide.title}
+                  className="w-full h-full object-cover object-center transform transition-all duration-700 group-hover:scale-105 animate-in fade-in duration-500"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-black/10 pointer-events-none" />
 
-                <div className="py-5 space-y-3">
-                  <div className="bg-black/30 rounded-2xl p-4 border border-white/10">
-                    <span className="text-[11px] text-slate-300">Associate Membership Fee</span>
-                    <div className="text-2xl font-black text-white font-mono mt-0.5">₹ 200 Only</div>
-                    <p className="text-[10px] text-emerald-300 mt-1 flex items-center gap-1">
-                      <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                      <span>Full voting &amp; high-yield deposit rights</span>
-                    </p>
+                {/* Top Floating Glass Badges */}
+                <div className="absolute top-3.5 inset-x-3.5 sm:top-4 sm:inset-x-4 flex items-center justify-between pointer-events-none">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/95 backdrop-blur-md border border-slate-200/90 text-[11px] sm:text-xs font-bold text-slate-800 shadow-md">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                    <span>{activeSlide.cardBadge || activeSlide.badge}</span>
                   </div>
-
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="p-3 bg-white/5 rounded-xl border border-white/10">
-                      <span className="text-[10px] text-slate-300 block">Total Capital</span>
-                      <strong className="text-sm font-bold text-amber-300">₹ 250+ Cr</strong>
-                    </div>
-                    <div className="p-3 bg-white/5 rounded-xl border border-white/10">
-                      <span className="text-[10px] text-slate-300 block">Members</span>
-                      <strong className="text-sm font-bold text-emerald-300">15,000+</strong>
-                    </div>
+                  <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-600/90 backdrop-blur-md border border-emerald-400/30 text-[10px] sm:text-[11px] font-bold text-white shadow-md">
+                    <CheckCircle2 className="w-3 h-3 text-white" />
+                    <span>Govt. Regulated</span>
                   </div>
                 </div>
 
-                <button
-                  onClick={() => onNavigate('membership-form')}
-                  className="w-full py-2.5 rounded-xl bg-white text-slate-900 font-bold text-xs uppercase tracking-wider hover:bg-slate-100 transition-colors flex items-center justify-center gap-1.5"
-                >
-                  <FileText className="w-3.5 h-3.5 text-finance-600" />
-                  <span>Download Statutory Form (PDF)</span>
-                </button>
+                {/* Bottom Floating Details Strip */}
+                <div className="absolute bottom-3 inset-x-3 sm:bottom-4 sm:inset-x-4 p-3 sm:p-3.5 rounded-2xl bg-slate-950/85 backdrop-blur-md border border-white/20 shadow-xl flex items-center justify-between gap-3 text-white">
+                  <div className="min-w-0">
+                    <div className="text-[10px] sm:text-[11px] text-slate-300 font-medium truncate">{activeSlide.tag}</div>
+                    <div className="text-xs sm:text-sm font-extrabold text-white font-mono truncate flex items-center gap-1.5">
+                      <span className="text-amber-400">●</span>
+                      <span>{activeSlide.badge}</span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={activeSlide.primaryAction}
+                    className="flex-shrink-0 px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-md active:scale-95 cursor-pointer"
+                  >
+                    <span>{activeSlide.id === 'loans' ? 'Apply Loan' : 'Explore'}</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
 
           {/* Carousel Pagination Controls */}
-          <div className="flex items-center justify-between pt-10 border-t border-white/10 mt-10">
+          <div className="flex items-center justify-between pt-8 border-t border-slate-200/80 mt-10">
             {/* Dots */}
             <div className="flex items-center gap-2">
               {heroSlides.map((_, idx) => (
                 <button
                   key={idx}
                   onClick={() => setCurrentSlide(idx)}
-                  className={`h-2.5 rounded-full transition-all ${
-                    currentSlide === idx ? 'w-8 bg-amber-400' : 'w-2.5 bg-white/30 hover:bg-white/60'
+                  className={`h-2.5 rounded-full transition-all cursor-pointer ${
+                    currentSlide === idx ? 'w-8 bg-[#003E9E]' : 'w-2.5 bg-slate-300 hover:bg-slate-400'
                   }`}
                   aria-label={`Slide ${idx + 1}`}
                 />
@@ -424,19 +430,56 @@ const LandingPage = ({ onNavigate }) => {
             <div className="flex items-center gap-2">
               <button
                 onClick={handlePrevSlide}
-                className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 flex items-center justify-center text-white transition-colors"
+                className="w-9 h-9 rounded-full bg-white hover:bg-slate-50 border border-slate-200 shadow-sm flex items-center justify-center text-slate-700 hover:text-[#003E9E] transition-colors cursor-pointer"
                 aria-label="Previous Slide"
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
               <button
                 onClick={handleNextSlide}
-                className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 flex items-center justify-center text-white transition-colors"
+                className="w-9 h-9 rounded-full bg-white hover:bg-slate-50 border border-slate-200 shadow-sm flex items-center justify-center text-slate-700 hover:text-[#003E9E] transition-colors cursor-pointer"
                 aria-label="Next Slide"
               >
                 <ChevronRight className="w-5 h-5" />
               </button>
             </div>
+          </div>
+
+          {/* Statutory Trust Indicators Bar */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-6 border-t border-slate-200/80 mt-6">
+            <div className="p-3.5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center font-bold text-xs">
+                ₹
+              </div>
+              <div>
+                <span className="text-[10px] text-slate-500 block font-semibold uppercase tracking-wider">Associate Membership</span>
+                <strong className="text-xs sm:text-sm font-bold text-slate-900 font-mono">₹ 200 Only</strong>
+              </div>
+            </div>
+            <div className="p-3.5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center gap-3">
+              <ShieldCheck className="w-7 h-7 text-emerald-600 flex-shrink-0" />
+              <div>
+                <span className="text-[10px] text-slate-500 block font-semibold uppercase tracking-wider">Capital Governance</span>
+                <strong className="text-xs sm:text-sm font-bold text-emerald-700 font-mono">₹ 250+ Cr Assets</strong>
+              </div>
+            </div>
+            <div className="p-3.5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center gap-3">
+              <Users className="w-7 h-7 text-[#003E9E] flex-shrink-0" />
+              <div>
+                <span className="text-[10px] text-slate-500 block font-semibold uppercase tracking-wider">Active Community</span>
+                <strong className="text-xs sm:text-sm font-bold text-slate-900 font-mono">15,000+ Members</strong>
+              </div>
+            </div>
+            <button
+              onClick={() => onNavigate('membership-form')}
+              className="p-3.5 rounded-2xl bg-blue-50/80 hover:bg-blue-100/70 border border-blue-200/80 flex items-center justify-between text-left group transition-all cursor-pointer"
+            >
+              <div>
+                <span className="text-[10px] text-blue-700 block font-semibold uppercase tracking-wider">Statutory PDF</span>
+                <strong className="text-xs sm:text-sm font-bold text-[#003E9E] group-hover:underline">Download Form</strong>
+              </div>
+              <FileText className="w-5 h-5 text-[#003E9E]" />
+            </button>
           </div>
         </div>
       </section>

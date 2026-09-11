@@ -19,7 +19,7 @@ const Logo = ({ variant = 'dark', size = 'md', showTagline = true, onClick, full
 
   if (fullImage) {
     return (
-      <div 
+      <div
         className={`inline-flex items-center select-none ${onClick ? 'cursor-pointer' : ''}`}
         onClick={onClick}
       >
@@ -33,7 +33,7 @@ const Logo = ({ variant = 'dark', size = 'md', showTagline = true, onClick, full
   }
 
   return (
-    <div 
+    <div
       className={`inline-flex items-center gap-2 sm:gap-3 select-none flex-shrink-0 whitespace-nowrap ${onClick ? 'cursor-pointer' : ''}`}
       onClick={onClick}
     >

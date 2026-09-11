@@ -191,7 +191,7 @@ const AppController = () => {
       {isPublicNavRoute && (
         <>
           <Navbar onNavigate={navigate} currentPage={isLoginRoute ? 'login' : 'home'} />
-          <div className="h-[96px] sm:h-[112px] xl:h-[152px] w-full flex-shrink-0 pointer-events-none" aria-hidden="true" />
+          <div className="h-16 sm:h-20 w-full flex-shrink-0 pointer-events-none" aria-hidden="true" />
         </>
       )}
       <main className="flex-1 flex flex-col">

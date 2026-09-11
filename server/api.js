@@ -195,19 +195,19 @@ export async function handleApiRequest(req, res) {
       const branch = db.findById('branches', branchId) || db.table('branches')[0];
       const associate = db.findById('associates', associateId) || db.table('associates')[0];
 
-      // Create Application Record (Status: Submitted)
+      // Create Application Record (Status: Approved - Instant Clearance)
       const applicationRecord = db.insert('membership_applications', {
         id: applicationId,
         user_id: userId,
         member_id: membershipId || null, // assigned membership ID
         emp_id: empId || null,
-        status: 'Submitted',
+        status: 'Approved',
         rejection_reason: null,
         correction_notes: null,
         membership_fee: 200,
         payment_method: body.paymentMethod || body.payment_method || 'UPI',
         payment_txn_ref: body.paymentTxnRef || body.payment_txn_ref || body.paymentRef || null,
-        payment_status: 'Pending Admin Verification',
+        payment_status: 'Paid',
         membership_fee_receipt: `REC-2026-${Math.floor(1000 + Math.random() * 9000)}`,
         share_number: `SH-${Math.floor(1000 + Math.random() * 9000)}`,
         share_count: Number(shareCount) || 10,
@@ -327,9 +327,9 @@ export async function handleApiRequest(req, res) {
         });
       }
 
-      // Create Pending Member record so applicant has an account
+      // Create Active Member record so applicant has an account with instant approval
       const memberRecord = db.insert('members', {
-        id: membershipId || `PENDING-${applicationId}`,
+        id: membershipId || `UF-2026-${Math.floor(1000 + Math.random() * 9000)}`,
         membership_id: membershipId || null,
         user_id: userId,
         application_id: applicationId,
@@ -363,10 +363,10 @@ export async function handleApiRequest(req, res) {
         associate_name: associate.name,
         associateName: associate.name,
         associateCode: associate.code,
-        account_status: 'Pending Verification',
-        accountStatus: 'Pending Verification',
-        kyc_status: 'Under Review',
-        kycStatus: 'Under Review',
+        account_status: 'Active',
+        accountStatus: 'Active',
+        kyc_status: 'Verified',
+        kycStatus: 'Verified',
         available_balance: 0,
         total_deposits: 0,
         active_loan: 0,
@@ -418,7 +418,9 @@ export async function handleApiRequest(req, res) {
         paymentMethod: body.paymentMethod || body.payment_method || 'UPI',
         payment_txn_ref: body.paymentTxnRef || body.payment_txn_ref || body.paymentRef || null,
         paymentTxnRef: body.paymentTxnRef || body.payment_txn_ref || body.paymentRef || null,
-        payment_status: 'Pending Admin Verification'
+        payment_status: 'Paid',
+        paymentStatus: 'Paid',
+        status: 'Approved'
       });
 
       // Notification
@@ -802,7 +804,7 @@ export async function handleApiRequest(req, res) {
           signatureDate: app.signature_date || member.signature_date || null,
           membership_fee: app.membership_fee || 200,
           payment_amount: app.membership_fee || 200,
-          payment_status: app.payment_status || 'Pending Admin Verification',
+          payment_status: app.payment_status || 'Paid',
           payment_method: app.payment_method || 'UPI',
           payment_txn_ref: app.payment_txn_ref || `UTR${Date.now().toString().slice(-8)}`
         };
@@ -948,7 +950,7 @@ export async function handleApiRequest(req, res) {
           signatureDate: app.signature_date || member.signature_date || null,
           membership_fee: app.membership_fee || 200,
           payment_amount: app.membership_fee || 200,
-          payment_status: app.payment_status || 'Pending Admin Verification',
+          payment_status: app.payment_status || 'Paid',
           payment_method: app.payment_method || 'UPI',
           payment_txn_ref: app.payment_txn_ref || `UTR${Date.now().toString().slice(-8)}`,
           auditLogs
@@ -1263,9 +1265,9 @@ export async function handleApiRequest(req, res) {
           signatureDate: member.signature_date || member.signatureDate || null,
           paymentMethod: member.payment_method || member.paymentMethod || application?.payment_method || 'UPI',
           paymentTxnRef: member.payment_txn_ref || member.paymentTxnRef || application?.payment_txn_ref || null,
-          paymentStatus: member.payment_status || member.paymentStatus || application?.payment_status || 'Pending Admin Verification',
-          accountStatus: member.account_status || member.accountStatus || 'Pending Verification',
-          kycStatus: member.kyc_status || member.kycStatus || 'Under Review',
+          paymentStatus: member.payment_status || member.paymentStatus || application?.payment_status || 'Paid',
+          accountStatus: member.account_status || member.accountStatus || 'Active',
+          kycStatus: member.kyc_status || member.kycStatus || 'Verified',
           availableBalance: member.available_balance || member.availableBalance || 0,
           totalDeposits: member.total_deposits || member.totalDeposits || 0,
           activeLoan: member.active_loan || member.activeLoan || 0,

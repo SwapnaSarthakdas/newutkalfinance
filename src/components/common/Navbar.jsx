@@ -9,6 +9,7 @@ import {
   Bell,
   LogIn,
   User,
+  UserPlus,
   ChevronDown,
   ArrowRight,
   Shield,
@@ -34,7 +35,6 @@ const Navbar = ({ onNavigate, currentPage = 'home' }) => {
   const [activeSegment, setActiveSegment] = useState('personal'); // 'personal' | 'business' | 'nri' | 'micro'
   const [activeMegaMenu, setActiveMegaMenu] = useState(null); // category id or null
   const [loginDropdownOpen, setLoginDropdownOpen] = useState(false);
-  const [customerCareOpen, setCustomerCareOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
@@ -42,28 +42,7 @@ const Navbar = ({ onNavigate, currentPage = 'home' }) => {
   const [locateModalOpen, setLocateModalOpen] = useState(false);
   const [complaintModalOpen, setComplaintModalOpen] = useState(false);
 
-  // Accessibility state
-  const [fontSizeLevel, setFontSizeLevel] = useState('md'); // 'sm' | 'md' | 'lg'
-  const [isHighContrast, setIsHighContrast] = useState(false);
-
   const megaMenuTimeoutRef = useRef(null);
-
-  // Apply font size class to document body
-  const handleFontSize = (level) => {
-    setFontSizeLevel(level);
-    document.body.classList.remove('font-size-sm', 'font-size-md', 'font-size-lg');
-    document.body.classList.add(`font-size-${level}`);
-  };
-
-  // Toggle high contrast mode
-  const handleContrastToggle = (enabled) => {
-    setIsHighContrast(enabled);
-    if (enabled) {
-      document.body.classList.add('high-contrast-mode');
-    } else {
-      document.body.classList.remove('high-contrast-mode');
-    }
-  };
 
   const handleNav = (routeId) => {
     setMobileMenuOpen(false);
@@ -148,145 +127,7 @@ const Navbar = ({ onNavigate, currentPage = 'home' }) => {
     <>
       <header className="fixed top-0 left-0 right-0 z-50 w-full shadow-md select-none">
         {/* ========================================================================= */}
-        {/* 1. TOP UTILITY HEADER BAR (Utkarsh Bank Style)                            */}
-        {/* ========================================================================= */}
-        <div className="bg-[#1A2332] text-slate-200 text-[11px] sm:text-xs border-b border-slate-700/60 relative z-30">
-          <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-1 sm:py-1.5 flex items-center justify-between gap-2">
-            {/* Left Utility Links */}
-            <div className="flex items-center gap-2 sm:gap-4 lg:gap-6 min-w-0">
-              <button
-                onClick={() => setLocateModalOpen(true)}
-                className="inline-flex items-center gap-1.5 text-slate-300 hover:text-white font-medium transition-colors"
-                title="Find Branches & Service Points"
-              >
-                <MapPin className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
-                <span className="hidden sm:inline">Locate Us</span>
-              </button>
-
-              <button
-                onClick={() => setComplaintModalOpen(true)}
-                className="inline-flex items-center gap-1.5 text-slate-300 hover:text-white font-medium transition-colors"
-                title="Grievance Redressal & Support"
-              >
-                <FileText className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
-                <span className="hidden md:inline">Lodge a Complaint</span>
-              </button>
-
-              <a
-                href="https://wa.me/919776175240?text=Hi%2C%20I%20would%20like%20to%20know%20more%20about%20New%20Utkal%20Finance%20banking%20services"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-emerald-400 hover:text-emerald-300 font-bold transition-colors"
-                title="Connect on WhatsApp"
-              >
-                <span className="text-emerald-400 font-bold">💬</span>
-                <span className="hidden xs:inline">WhatsApp Banking</span>
-              </a>
-
-              <button
-                onClick={() => handleNav('admin-login')}
-                className="hidden lg:inline-flex items-center gap-1.5 text-slate-300 hover:text-white font-medium transition-colors cursor-pointer"
-              >
-                <Lock className="w-3.5 h-3.5 text-teal-400 flex-shrink-0" />
-                <span>Admin Console</span>
-              </button>
-            </div>
-
-            {/* Right Utility: Customer Care Dropdown & Accessibility */}
-            <div className="flex items-center gap-3 sm:gap-4 flex-shrink-0">
-              {/* Customer Care Dropdown */}
-              <div className="relative">
-                <button
-                  onClick={() => setCustomerCareOpen(!customerCareOpen)}
-                  className="inline-flex items-center gap-1.5 text-slate-200 hover:text-white font-semibold bg-white/10 hover:bg-white/15 px-2.5 py-0.5 sm:py-1 rounded-md transition-colors"
-                >
-                  <Phone className="w-3 h-3 text-amber-400" />
-                  <span className="hidden sm:inline text-slate-400 font-normal">Helpline:</span>
-                  <span className="font-mono font-bold text-amber-300 text-[11px] sm:text-xs">1800 123 9878</span>
-                  <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${customerCareOpen ? 'rotate-180' : ''}`} />
-                </button>
-
-                {customerCareOpen && (
-                  <div 
-                    className="absolute right-0 mt-1.5 w-64 bg-white text-slate-800 rounded-xl shadow-2xl border border-slate-200 p-3 z-50 text-xs animate-in fade-in slide-in-from-top-1"
-                    onMouseLeave={() => setCustomerCareOpen(false)}
-                  >
-                    <div className="font-bold text-slate-900 border-b border-slate-100 pb-1.5 mb-2 flex items-center justify-between">
-                      <span>Official Bank Helpline</span>
-                      <span className="text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded font-semibold">Toll Free</span>
-                    </div>
-                    <ul className="space-y-2">
-                      <li>
-                        <a href="tel:18001239878" className="block p-1.5 rounded hover:bg-slate-50 transition-colors">
-                          <div className="font-bold text-finance-600 font-mono">1800 123 9878</div>
-                          <div className="text-[10px] text-slate-500">Customer Service Desk (24x7)</div>
-                        </a>
-                      </li>
-                      <li>
-                        <a href="tel:18002081788" className="block p-1.5 rounded hover:bg-slate-50 transition-colors">
-                          <div className="font-bold text-finance-600 font-mono">1800 208 1788</div>
-                          <div className="text-[10px] text-slate-500">Member &amp; Accounts Support</div>
-                        </a>
-                      </li>
-                      <li>
-                        <a href="tel:+919776175240" className="block p-1.5 rounded hover:bg-slate-50 transition-colors">
-                          <div className="font-bold text-finance-600 font-mono">+91 9776175240</div>
-                          <div className="text-[10px] text-slate-500">Managing Director &amp; Executive Desk</div>
-                        </a>
-                      </li>
-                    </ul>
-                  </div>
-                )}
-              </div>
-
-              {/* Accessibility Font Size Buttons */}
-              <div className="hidden sm:flex items-center gap-1 border-l border-slate-700 pl-3">
-                <button
-                  onClick={() => handleFontSize('sm')}
-                  className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${fontSizeLevel === 'sm' ? 'bg-finance-600 text-white' : 'text-slate-400 hover:text-white'}`}
-                  title="Decrease Font Size"
-                >
-                  A-
-                </button>
-                <button
-                  onClick={() => handleFontSize('md')}
-                  className={`px-1.5 py-0.5 rounded text-[11px] font-bold ${fontSizeLevel === 'md' ? 'bg-finance-600 text-white' : 'text-slate-400 hover:text-white'}`}
-                  title="Standard Font Size"
-                >
-                  A
-                </button>
-                <button
-                  onClick={() => handleFontSize('lg')}
-                  className={`px-1.5 py-0.5 rounded text-[12px] font-bold ${fontSizeLevel === 'lg' ? 'bg-finance-600 text-white' : 'text-slate-400 hover:text-white'}`}
-                  title="Increase Font Size"
-                >
-                  A+
-                </button>
-              </div>
-
-              {/* Theme Contrast (Standard vs High Contrast) */}
-              <div className="hidden md:flex items-center gap-1 border-l border-slate-700 pl-2">
-                <button
-                  onClick={() => handleContrastToggle(false)}
-                  className={`w-5 h-5 rounded-full border text-[10px] font-bold flex items-center justify-center ${!isHighContrast ? 'border-white bg-white text-slate-900 font-extrabold' : 'border-slate-500 text-slate-400'}`}
-                  title="Standard View"
-                >
-                  A
-                </button>
-                <button
-                  onClick={() => handleContrastToggle(true)}
-                  className={`w-5 h-5 rounded-full border text-[10px] font-bold flex items-center justify-center ${isHighContrast ? 'border-amber-400 bg-black text-amber-400' : 'border-slate-600 bg-slate-800 text-slate-300'}`}
-                  title="High Contrast View"
-                >
-                  A
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* ========================================================================= */}
-        {/* 2. MIDDLE HEADER BAR (Logo, Segment Tabs, Search, Login)                 */}
+        {/* MAIN HEADER BAR (Logo, Segment Tabs, Search, Login)                      */}
         {/* ========================================================================= */}
         <div className="bg-white border-b border-slate-200 relative z-20">
           <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
@@ -297,7 +138,7 @@ const Navbar = ({ onNavigate, currentPage = 'home' }) => {
                 onClick={() => handleNav('home')}
                 title="New Utkal Finance Limited - Back to Home"
               >
-                <Logo size="md" />
+                <Logo size="md" stackedOnMobile={true} />
               </div>
 
               {/* Segment Navigation (Personal, Business, NRI, Micro Banking, etc.) */}
@@ -317,6 +158,20 @@ const Navbar = ({ onNavigate, currentPage = 'home' }) => {
                   className="px-2.5 py-1.5 text-xs 2xl:text-sm font-semibold text-slate-700 hover:text-finance-600 transition-colors"
                 >
                   About Us
+                </button>
+                <button
+                  onClick={() => handleNav('register')}
+                  className={`px-2.5 py-1.5 text-xs 2xl:text-sm font-bold transition-all flex items-center gap-1.5 ${
+                    currentPage === 'register'
+                      ? 'bg-finance-50 text-finance-600 font-extrabold border-b-2 border-finance-600 shadow-2xs'
+                      : 'text-finance-600 hover:bg-finance-50/80'
+                  }`}
+                >
+                  <UserPlus className="w-3.5 h-3.5" />
+                  <span>Become a Member</span>
+                  <span className="text-[9.5px] px-1.5 py-0.2 rounded-full font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                    ₹200
+                  </span>
                 </button>
                 <button
                   onClick={() => handleNav('membership-form')}
@@ -339,12 +194,12 @@ const Navbar = ({ onNavigate, currentPage = 'home' }) => {
                 </button>
               </nav>
 
-              {/* Right Action Cluster: Search, Notifications & Login Dropdown */}
+              {/* Right Action Cluster: Search, Notifications, Become a Member & Login Dropdown */}
               <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
                 {/* Search Button */}
                 <button
                   onClick={() => setSearchModalOpen(true)}
-                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-slate-200 bg-slate-50 hover:bg-slate-100 flex items-center justify-center text-slate-600 hover:text-finance-600 transition-colors"
+                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-slate-200 bg-slate-50 hover:bg-slate-100 flex items-center justify-center text-slate-600 hover:text-finance-600 transition-colors cursor-pointer"
                   title="Search Services, Rates & Products"
                 >
                   <Search className="w-4 h-4" />
@@ -354,7 +209,7 @@ const Navbar = ({ onNavigate, currentPage = 'home' }) => {
                 <div className="relative">
                   <button
                     onClick={() => setNotificationsOpen(!notificationsOpen)}
-                    className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-slate-200 bg-slate-50 hover:bg-slate-100 flex items-center justify-center text-slate-600 hover:text-finance-600 transition-colors relative"
+                    className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-slate-200 bg-slate-50 hover:bg-slate-100 flex items-center justify-center text-slate-600 hover:text-finance-600 transition-colors relative cursor-pointer"
                     title="Important Notifications"
                   >
                     <Bell className="w-4 h-4" />
@@ -388,7 +243,7 @@ const Navbar = ({ onNavigate, currentPage = 'home' }) => {
                           </p>
                           <button
                             onClick={() => { setNotificationsOpen(false); handleNav('membership-form'); }}
-                            className="text-[10px] font-bold text-finance-600 hover:underline mt-1"
+                            className="text-[10px] font-bold text-finance-600 hover:underline mt-1 cursor-pointer"
                           >
                             Download Form &rarr;
                           </button>
@@ -404,12 +259,23 @@ const Navbar = ({ onNavigate, currentPage = 'home' }) => {
                   )}
                 </div>
 
+                {/* Primary CTA: Become a Member */}
+                <button
+                  onClick={() => handleNav('register')}
+                  className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-[#003E9E] via-[#0A3F9F] to-finance-700 hover:from-[#002E78] hover:to-finance-800 text-white text-xs sm:text-sm font-bold shadow-md hover:shadow-lg transition-all cursor-pointer shrink-0"
+                  title="Apply for Statutory Associate Membership (Fee: ₹200)"
+                >
+                  <UserPlus className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-300 shrink-0" />
+                  <span className="hidden xs:inline">Become a Member</span>
+                  <span className="xs:hidden">Join</span>
+                </button>
+
                 {/* Authenticated Admin Portal or Admin Login */}
                 {user ? (
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => handleNav('admin-dashboard')}
-                      className="inline-flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-finance-900 hover:bg-finance-800 text-white text-xs sm:text-sm font-bold shadow-md transition-all cursor-pointer"
+                      className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-finance-900 hover:bg-finance-800 text-white text-xs sm:text-sm font-bold shadow-md transition-all cursor-pointer shrink-0"
                     >
                       <Shield className="w-4 h-4 text-amber-400" />
                       <span className="hidden sm:inline">Admin Console</span>
@@ -417,7 +283,7 @@ const Navbar = ({ onNavigate, currentPage = 'home' }) => {
                     </button>
                     <button
                       onClick={logout}
-                      className="px-2.5 py-2 text-xs font-semibold text-slate-500 hover:text-slate-800 cursor-pointer"
+                      className="px-2 py-2 text-xs font-semibold text-slate-500 hover:text-slate-800 cursor-pointer shrink-0"
                     >
                       Sign Out
                     </button>
@@ -426,10 +292,10 @@ const Navbar = ({ onNavigate, currentPage = 'home' }) => {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => handleNav('admin-login')}
-                      className="inline-flex items-center gap-1.5 px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-purple-900 via-slate-900 to-finance-950 hover:from-purple-800 hover:to-slate-800 text-white text-xs sm:text-sm font-bold shadow-md hover:shadow-lg transition-all cursor-pointer"
+                      className="hidden md:inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs sm:text-sm font-semibold transition-colors border border-slate-200 cursor-pointer shrink-0"
                     >
-                      <Shield className="w-3.5 h-3.5 text-amber-400" />
-                      <span>Admin Login</span>
+                      <Shield className="w-3.5 h-3.5 text-slate-600" />
+                      <span>Admin</span>
                     </button>
                   </div>
                 )}
@@ -437,7 +303,7 @@ const Navbar = ({ onNavigate, currentPage = 'home' }) => {
                 {/* Mobile Hamburger Toggle */}
                 <button
                   onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                  className="xl:hidden w-9 h-9 sm:w-10 sm:h-10 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 flex items-center justify-center text-slate-700"
+                  className="xl:hidden w-9 h-9 sm:w-10 sm:h-10 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 flex items-center justify-center text-slate-700 cursor-pointer"
                   aria-label="Toggle Menu"
                 >
                   {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -447,89 +313,7 @@ const Navbar = ({ onNavigate, currentPage = 'home' }) => {
           </div>
         </div>
 
-        {/* ========================================================================= */}
-        {/* 3. BOTTOM MEGA MENU BAR (Utkarsh Bank Categories)                         */}
-        {/* ========================================================================= */}
-        <div className="hidden xl:block bg-[#F8FAFC] border-b border-slate-200/80 text-xs font-semibold text-slate-700 relative z-10">
-          <div className="max-w-7xl mx-auto px-6 lg:px-8">
-            <div className="flex items-center justify-start gap-1 py-1">
-              {personalMegaCategories.map((cat) => (
-                <div
-                  key={cat.id}
-                  className="relative"
-                  onMouseEnter={() => {
-                    if (megaMenuTimeoutRef.current) clearTimeout(megaMenuTimeoutRef.current);
-                    setActiveMegaMenu(cat.id);
-                  }}
-                  onMouseLeave={() => {
-                    megaMenuTimeoutRef.current = setTimeout(() => {
-                      setActiveMegaMenu(null);
-                    }, 200);
-                  }}
-                >
-                  <button
-                    onClick={() => setActiveMegaMenu(activeMegaMenu === cat.id ? null : cat.id)}
-                    className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg transition-colors ${
-                      activeMegaMenu === cat.id
-                        ? 'bg-white text-finance-600 font-bold shadow-xs'
-                        : 'hover:bg-white/80 hover:text-finance-600 text-slate-800'
-                    }`}
-                  >
-                    <span>{cat.label}</span>
-                    {cat.badge && (
-                      <span className="text-[9.5px] px-1.5 py-0.2 rounded-full font-bold bg-amber-100 text-amber-800 border border-amber-200">
-                        {cat.badge}
-                      </span>
-                    )}
-                    <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${activeMegaMenu === cat.id ? 'rotate-180 text-finance-600' : ''}`} />
-                  </button>
 
-                  {/* Mega Menu Dropdown */}
-                  {activeMegaMenu === cat.id && (
-                    <div 
-                      className="absolute top-full left-0 mt-0.5 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-slate-200 p-4 z-50 animate-in fade-in"
-                      onMouseEnter={() => {
-                        if (megaMenuTimeoutRef.current) clearTimeout(megaMenuTimeoutRef.current);
-                      }}
-                      onMouseLeave={() => setActiveMegaMenu(null)}
-                    >
-                      <div className="font-bold text-slate-900 border-b border-slate-100 pb-2 mb-2 flex items-center justify-between">
-                        <span className="text-finance-600 uppercase tracking-wider text-[11px] font-extrabold">{cat.label} Solutions</span>
-                        <span className="text-[10px] text-slate-400">Utkal Bank Portfolio</span>
-                      </div>
-                      <div className="space-y-2">
-                        {cat.items.map((sub, sIdx) => (
-                          <button
-                            key={sIdx}
-                            onClick={() => handleNav(sub.route)}
-                            className="w-full text-left p-2 rounded-xl hover:bg-slate-50 transition-colors group flex items-start justify-between"
-                          >
-                            <div>
-                              <div className="font-bold text-slate-900 text-xs group-hover:text-finance-600 flex items-center gap-1">
-                                <span>{sub.name}</span>
-                                <ArrowRight className="w-3 h-3 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all text-finance-600" />
-                              </div>
-                              <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">{sub.desc}</p>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                      <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px]">
-                        <span className="text-slate-500">Need instant assistance?</span>
-                        <button
-                          onClick={() => handleNav('register')}
-                          className="font-bold text-finance-600 hover:underline"
-                        >
-                          Apply Online &rarr;
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
 
         {/* ========================================================================= */}
         {/* MOBILE NAVIGATION DRAWER                                                  */}
@@ -598,9 +382,10 @@ const Navbar = ({ onNavigate, currentPage = 'home' }) => {
               {/* Mobile CTA */}
               <button
                 onClick={() => handleNav('register')}
-                className="w-full py-3 rounded-xl bg-finance-600 hover:bg-finance-700 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-md"
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-[#003E9E] via-[#0A3F9F] to-finance-700 hover:from-[#002E78] hover:to-finance-800 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-md cursor-pointer"
               >
-                <span>Apply as Associate Member (₹200)</span>
+                <UserPlus className="w-4 h-4 text-amber-300" />
+                <span>Become a Member (₹200 Fee)</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
 

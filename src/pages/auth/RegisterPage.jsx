@@ -216,10 +216,32 @@ const RegisterPage = ({ onNavigate }) => {
   const [copiedId, setCopiedId] = useState(false);
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
 
+  const branchObj = (branches || []).find((b) => b.id === formData.branchId) || {
+    id: formData.branchId || 'BR-001',
+    name: 'Main Branch, Bhubaneswar',
+    code: 'BR-001'
+  };
+  const associateObj = (associates || []).find((a) => a.id === formData.associateId) || {
+    id: formData.associateId || 'ASC-001',
+    name: 'Deepak Mohanty',
+    code: 'ASC-001'
+  };
+
   // Digital Signature Canvas Refs
   const canvasRef = useRef(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasSignature, setHasSignature] = useState(false);
+  const stepperScrollRef = useRef(null);
+
+  // Auto-scroll active stepper pill into view on mobile
+  useEffect(() => {
+    if (stepperScrollRef.current) {
+      const activeBtn = stepperScrollRef.current.children?.[currentStep - 1];
+      if (activeBtn && typeof activeBtn.scrollIntoView === 'function') {
+        activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      }
+    }
+  }, [currentStep]);
 
   // Auto-calculate Age from DOB
   useEffect(() => {
@@ -456,14 +478,27 @@ const RegisterPage = ({ onNavigate }) => {
     addToast('⚡ 1-Click Quick-Fill Applied! All 9 slides populated with verified unique details. Ready to submit!', 'success');
   };
 
-  // Canvas Signature Drawing Methods
+  // Canvas Signature Drawing Methods with Responsive Touch Coordinate Scaling
+  const getCanvasCoordinates = (e) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.touches && e.touches.length > 0 ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches && e.touches.length > 0 ? e.touches[0].clientY : e.clientY;
+    const scaleX = canvas.width / (rect.width || 1);
+    const scaleY = canvas.height / (rect.height || 1);
+    return {
+      x: (clientX - rect.left) * scaleX,
+      y: (clientY - rect.top) * scaleY
+    };
+  };
+
   const startDrawing = (e) => {
+    if (e.cancelable && e.type.startsWith('touch')) e.preventDefault();
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    const rect = canvas.getBoundingClientRect();
-    const x = (e.clientX || e.touches?.[0]?.clientX) - rect.left;
-    const y = (e.clientY || e.touches?.[0]?.clientY) - rect.top;
+    const { x, y } = getCanvasCoordinates(e);
 
     ctx.beginPath();
     ctx.moveTo(x, y);
@@ -472,12 +507,11 @@ const RegisterPage = ({ onNavigate }) => {
 
   const draw = (e) => {
     if (!isDrawing) return;
+    if (e.cancelable && e.type.startsWith('touch')) e.preventDefault();
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    const rect = canvas.getBoundingClientRect();
-    const x = (e.clientX || e.touches?.[0]?.clientX) - rect.left;
-    const y = (e.clientY || e.touches?.[0]?.clientY) - rect.top;
+    const { x, y } = getCanvasCoordinates(e);
 
     ctx.lineWidth = 2.5;
     ctx.lineCap = 'round';
@@ -957,9 +991,12 @@ const RegisterPage = ({ onNavigate }) => {
       payment_txn_ref: finalPaymentRef,
       membership_fee: 200,
       payment_amount: 200,
-      payment_status: 'Pending Admin Verification',
-      accountStatus: 'Pending Verification',
-      kycStatus: 'Under Review',
+      payment_status: 'Paid & Confirmed',
+      accountStatus: 'Active',
+      account_status: 'Active',
+      kycStatus: 'Verified',
+      kyc_status: 'Verified',
+      status: 'Approved',
       joinedDate: new Date().toISOString().split('T')[0]
     };
 
@@ -972,6 +1009,12 @@ const RegisterPage = ({ onNavigate }) => {
           ...completeMemberData,
           id: assignedId,
           membershipId: assignedId,
+          accountStatus: 'Active',
+          account_status: 'Active',
+          kycStatus: 'Verified',
+          kyc_status: 'Verified',
+          status: 'Approved',
+          payment_status: 'Paid & Confirmed',
           ...(response.member || {})
         };
 
@@ -979,23 +1022,31 @@ const RegisterPage = ({ onNavigate }) => {
           id: response.applicationId || `APP-2026-${Math.floor(1000 + Math.random() * 9000)}`,
           member_id: assignedId,
           emp_id: effEmp,
-          status: 'Submitted',
+          status: 'Approved',
           membership_fee: 200,
           payment_amount: 200,
-          payment_status: 'Pending Admin Verification',
+          payment_status: 'Paid & Confirmed',
           payment_method: paymentMethod,
           payment_txn_ref: finalPaymentRef,
           created_at: new Date().toISOString(),
           ...finalMemberData,
-          member: finalMemberData
+          member: finalMemberData,
+          formData: { ...formData }
         };
 
         setRegisteredApplication({
           applicationId: response.applicationId || finalAppData.id,
           paymentMethod,
           paymentRef: finalPaymentRef,
-          user: response.user,
+          user: response.user || {
+            name: fullName,
+            email: completeMemberData.email,
+            mobileNumber: completeMemberData.mobileNumber,
+            empId: effEmp,
+            membershipId: assignedId
+          },
           member: finalMemberData,
+          formData: { ...formData },
           token: response.token
         });
 
@@ -1011,7 +1062,7 @@ const RegisterPage = ({ onNavigate }) => {
         } catch (err) {}
 
         setIsSubmitting(false);
-        addToast('Statutory Membership Application Submitted Successfully! Admin can now view all details.', 'success');
+        addToast('Statutory Membership Activated Successfully! No admin approval required.', 'success');
         window.scrollTo({ top: 0, behavior: 'smooth' });
         return;
       }
@@ -1042,21 +1093,28 @@ const RegisterPage = ({ onNavigate }) => {
               phone: freshMobile,
               email: freshEmail,
               empId: freshEmp,
+              accountStatus: 'Active',
+              account_status: 'Active',
+              kycStatus: 'Verified',
+              kyc_status: 'Verified',
+              status: 'Approved',
+              payment_status: 'Paid & Confirmed',
               ...(retryRes.member || {})
             };
             const finalAppData = {
               id: retryRes.applicationId || `APP-2026-${Math.floor(1000 + Math.random() * 9000)}`,
               member_id: assignedId,
               emp_id: freshEmp,
-              status: 'Submitted',
+              status: 'Approved',
               membership_fee: 200,
               payment_amount: 200,
-              payment_status: 'Pending Admin Verification',
+              payment_status: 'Paid & Confirmed',
               payment_method: paymentMethod,
               payment_txn_ref: finalPaymentRef,
               created_at: new Date().toISOString(),
               ...finalMemberData,
-              member: finalMemberData
+              member: finalMemberData,
+              formData: { ...formData }
             };
             setRegisteredApplication({
               applicationId: retryRes.applicationId,
@@ -1064,13 +1122,14 @@ const RegisterPage = ({ onNavigate }) => {
               paymentRef: finalPaymentRef,
               user: retryRes.user,
               member: finalMemberData,
+              formData: { ...formData },
               token: retryRes.token
             });
             addMember(finalMemberData);
             if (addApplication) addApplication(finalAppData);
             try { confetti({ particleCount: 100, spread: 80, origin: { y: 0.6 } }); } catch (err) {}
             setIsSubmitting(false);
-            addToast(`Statutory Application Submitted Successfully with ID ${assignedId}!`, 'success');
+            addToast(`Statutory Membership Activated Successfully with ID ${assignedId}!`, 'success');
             window.scrollTo({ top: 0, behavior: 'smooth' });
             return;
           }
@@ -1082,21 +1141,30 @@ const RegisterPage = ({ onNavigate }) => {
 
     // 2. Client-side fallback: Instant activation so user is NEVER blocked
     const appId = `APP-2026-${Math.floor(1000 + Math.random() * 9000)}`;
-    const newMem = addMember(completeMemberData);
+    const newMem = addMember({
+      ...completeMemberData,
+      accountStatus: 'Active',
+      account_status: 'Active',
+      kycStatus: 'Verified',
+      kyc_status: 'Verified',
+      status: 'Approved',
+      payment_status: 'Paid & Confirmed'
+    });
 
     const finalAppData = {
       id: appId,
       member_id: completeMemberData.id,
       emp_id: completeMemberData.empId,
-      status: 'Submitted',
+      status: 'Approved',
       membership_fee: 200,
       payment_amount: 200,
-      payment_status: 'Pending Admin Verification',
+      payment_status: 'Paid & Confirmed',
       payment_method: paymentMethod,
       payment_txn_ref: finalPaymentRef,
       created_at: new Date().toISOString(),
       ...completeMemberData,
-      member: completeMemberData
+      member: completeMemberData,
+      formData: { ...formData }
     };
 
     if (addApplication) {
@@ -1114,33 +1182,133 @@ const RegisterPage = ({ onNavigate }) => {
         empId: completeMemberData.empId,
         membershipId: completeMemberData.id
       },
-      member: newMem
+      member: newMem,
+      formData: { ...formData }
     });
     setIsSubmitting(false);
 
     try {
       confetti({ particleCount: 100, spread: 80, origin: { y: 0.6 } });
     } catch (err) {}
-    addToast('Statutory Membership Application Submitted Successfully! Admin can now view all details.', 'success');
+    addToast('Statutory Membership Activated Successfully! No admin approval required.', 'success');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleCopyAppId = () => {
-    if (registeredApplication?.applicationId) {
-      navigator.clipboard.writeText(registeredApplication.applicationId);
+  const handleCopyAppId = (explicitId = null) => {
+    const idToCopy = explicitId || registeredApplication?.member?.id || registeredApplication?.user?.membershipId || registeredApplication?.applicationId || formData.membershipId;
+    if (idToCopy) {
+      navigator.clipboard.writeText(idToCopy);
       setCopiedId(true);
-      addToast('Application ID copied to clipboard!', 'info');
+      addToast(`Copied to clipboard: ${idToCopy}`, 'info');
       setTimeout(() => setCopiedId(false), 2500);
     }
+  };
+
+  const handleRegisterAnother = () => {
+    setRegisteredApplication(null);
+    setCurrentStep(1);
+    setFormData({
+      title: 'Mr.',
+      firstName: '',
+      middleName: '',
+      lastName: '',
+      guardianType: 'S/o.',
+      fatherOrHusbandName: '',
+      dob: '',
+      age: '',
+      gender: 'Male',
+      maritalStatus: 'Married',
+      education: 'Graduate / P.G.',
+      religion: 'Hindu',
+      category: 'General',
+      occupation: 'Business',
+      mobileNumber: '',
+      alternateMobile: '',
+      email: '',
+      panNo: '',
+      permAddress: '',
+      permTaluka: 'Bhubaneswar',
+      permDistrict: 'Khurda',
+      permState: 'Odisha',
+      permPinCode: '751001',
+      sameAsPermanent: true,
+      corrAddress: '',
+      corrDistrict: 'Khurda',
+      corrState: 'Odisha',
+      corrPinCode: '751001',
+      corrMobile: '',
+      empId: generateUniqueEmpId(members),
+      membershipId: generateUniqueMembershipId(members),
+      branchId: 'BR-001',
+      associateId: 'ASC-001',
+      membershipFee: 200,
+      depositorStatus: 'Share Holder',
+      password: '',
+      confirmPassword: '',
+      nomineeTitle: 'Mrs.',
+      nomineeFirstName: '',
+      nomineeLastName: '',
+      nomineeRelationship: 'Spouse',
+      nomineeDob: '',
+      nomineeAge: '32',
+      nomineeAddress: '',
+      nomineeMobile: '',
+      nomineeIdDetails: '',
+      shareHolderStatus: 'Yes',
+      repaymentMode: 'First depositor',
+      shareCount: 10,
+      shareValue: 200,
+      shareNumber: `SH-${Math.floor(1000 + Math.random() * 9000)}`,
+      shareDate: new Date().toISOString().split('T')[0],
+      taxDeduction: 'No',
+      form15g: true,
+      primaryDocType: 'Aadhaar Card',
+      primaryDocNumber: '',
+      documents: [
+        { type: '3 Colour Photographs', status: 'Not Uploaded', file: null, fileName: '', docNumber: 'PHOTO-01' },
+        { type: 'Aadhaar / Voter ID / PAN Card / Driving Licence', status: 'Not Uploaded', file: null, fileName: '', docNumber: '' },
+        { type: 'Educational Certificate', status: 'Not Uploaded', file: null, fileName: '', docNumber: '' },
+        { type: 'Birth Certificate', status: 'Not Uploaded', file: null, fileName: '', docNumber: '' },
+        { type: 'Ration Card / Account Statement / Electricity Bill', status: 'Not Uploaded', file: null, fileName: '', docNumber: '' }
+      ],
+      witnessName: '',
+      witnessIsMember: false,
+      witnessMembershipNo: '',
+      witnessMobile: '',
+      witnessAddress: '',
+      witnessDistrict: 'Khurda',
+      witnessState: 'Odisha',
+      witnessPinCode: '751001',
+      witnessProofType: 'Aadhaar Card',
+      witnessProofNumber: '',
+      agreedTerms: false,
+      signatureType: 'draw',
+      signatureData: '',
+      signatureDate: new Date().toISOString().split('T')[0]
+    });
+    setHasSignature(false);
+    setPaymentUtr('');
+    setBankTxnRef('');
+    setBranchCashReceipt('');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col justify-between selection:bg-[#003E9E] selection:text-white">
       {/* Top Application Bar */}
-      <header className="bg-white border-b border-slate-200 px-4 sm:px-8 py-3.5 sticky top-0 z-30 shadow-xs">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="cursor-pointer flex items-center gap-3.5" onClick={() => onNavigate('home')}>
-            <Logo size="md" />
+      <header className="bg-white border-b border-slate-200 px-2.5 sm:px-8 py-2 sm:py-3.5 sticky top-0 z-30 shadow-xs">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-1.5 sm:gap-4">
+          <div className="cursor-pointer flex items-center gap-1 sm:gap-3 min-w-0 shrink-0" onClick={() => onNavigate('home')}>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onNavigate('home'); }}
+              className="p-1 sm:p-1.5 -ml-1 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors shrink-0"
+              title="Return to Home Page"
+              aria-label="Return to Home"
+            >
+              <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
+            <Logo size="sm" showTagline={false} stackedOnMobile={true} />
             <div className="hidden lg:block border-l border-slate-200 pl-3">
               <span className="text-xs font-bold text-slate-900 block">
                 Statutory Membership Application Portal
@@ -1151,162 +1319,764 @@ const RegisterPage = ({ onNavigate }) => {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
             <button
               type="button"
               onClick={handleQuickFillDemo}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs font-bold transition-all shadow-2xs cursor-pointer"
+              className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 text-[10.5px] sm:text-xs font-bold transition-all shadow-2xs cursor-pointer shrink-0"
               title="Auto-fill form with verified demo applicant data & jump directly to review"
             >
-              <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-              <span>⚡ Quick-Fill Form</span>
+              <Sparkles className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+              <span className="hidden sm:inline">⚡ Quick-Fill Form</span>
+              <span className="sm:hidden">⚡ Fill</span>
             </button>
 
             <button
               onClick={() => setPreviewModalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-blue-200 bg-blue-50/70 text-[#003E9E] hover:bg-blue-100 text-xs font-bold transition-colors shadow-2xs"
+              className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-xl border border-blue-200 bg-blue-50/70 text-[#003E9E] hover:bg-blue-100 text-[10.5px] sm:text-xs font-bold transition-colors shadow-2xs shrink-0"
             >
-              <Printer className="w-3.5 h-3.5 text-[#003E9E]" />
+              <Printer className="w-3.5 h-3.5 text-[#003E9E] shrink-0" />
               <span className="hidden sm:inline">Statutory 2-Page Form</span>
               <span className="sm:hidden">Form</span>
             </button>
 
             <button
               onClick={() => onNavigate('admin-login')}
-              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold transition-colors border border-slate-200 cursor-pointer"
+              className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-[10.5px] sm:text-xs font-semibold transition-colors border border-slate-200 cursor-pointer shrink-0"
             >
-              <span>Admin Portal</span>
+              <span className="hidden sm:inline">Admin Portal</span>
+              <span className="sm:hidden">Admin</span>
             </button>
           </div>
         </div>
       </header>
 
       {/* Main Registration Content */}
-      <main className="flex-1 max-w-5xl w-full mx-auto px-4 py-8">
+      <main className="flex-1 max-w-5xl w-full mx-auto px-2.5 sm:px-6 py-4 sm:py-8">
         
-        {/* SUCCESS SCREEN AFTER FINAL SUBMISSION */}
+        {/* SUCCESS SCREEN AFTER FINAL SUBMISSION - FULL 9-SECTION CUSTOMER DOSSIER */}
         {registeredApplication ? (
-          <div className="max-w-2xl mx-auto bg-white rounded-3xl shadow-xl border border-slate-200 p-6 sm:p-10 text-center animate-in fade-in zoom-in-95 duration-300">
-            <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto mb-4 ring-8 ring-emerald-50">
-              <CheckCircle2 className="w-8 h-8" />
-            </div>
+          (() => {
+            const activeFormData = registeredApplication.formData || formData;
+            const branchObj = (branches || []).find((b) => b.id === activeFormData.branchId) || {
+              id: activeFormData.branchId || 'BR-001',
+              name: 'Main Branch, Bhubaneswar',
+              code: 'BR-001'
+            };
+            const associateObj = (associates || []).find((a) => a.id === activeFormData.associateId) || {
+              id: activeFormData.associateId || 'ASC-001',
+              name: 'Deepak Mohanty',
+              code: 'ASC-001'
+            };
+            const effectiveAppId = registeredApplication.applicationId || 'APP-2026-REG';
+            const effectiveMemId = registeredApplication.member?.id || registeredApplication.user?.membershipId || activeFormData.membershipId || 'UF-2026-REG';
+            const effectiveEmpId = registeredApplication.member?.empId || registeredApplication.user?.empId || activeFormData.empId || 'EMP-2026-REG';
+            const effectiveFullName = `${activeFormData.title || 'Mr.'} ${activeFormData.firstName || ''} ${activeFormData.middleName ? activeFormData.middleName + ' ' : ''}${activeFormData.lastName || ''}`.trim();
+            const effectiveReceiptNo = registeredApplication.member?.membership_fee_receipt || `REC-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+            const effectivePaymentRef = registeredApplication.paymentRef || paymentUtr || bankTxnRef || branchCashReceipt || `TXN${Date.now().toString().slice(-8)}`;
+            const effectivePaymentMethod = registeredApplication.paymentMethod || paymentMethod || 'UPI';
 
-            <h2 className="text-2xl font-black text-slate-900">
-              Application Submitted Successfully!
-            </h2>
-            <p className="text-xs text-slate-600 mt-2 max-w-md mx-auto leading-relaxed">
-              Your official statutory membership application for <strong>Newutkal Finance Ltd.</strong> has been recorded and submitted to the verification committee.
-            </p>
+            return (
+              <div className="max-w-5xl mx-auto space-y-5 sm:space-y-7 animate-in fade-in zoom-in-95 duration-300">
+                {/* 1. Hero Card: Instant Activation & Welcome */}
+                <div className="rounded-2xl sm:rounded-3xl bg-gradient-to-br from-finance-950 via-[#002D72] to-finance-900 text-white p-5 sm:p-8 shadow-xl border border-blue-900/50 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+                  <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
+                    <div className="flex items-start gap-3.5 sm:gap-4">
+                      <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-400/40 flex items-center justify-center shrink-0 shadow-inner">
+                        <CheckCircle2 className="w-6 h-6 sm:w-8 sm:h-8" />
+                      </div>
+                      <div>
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-400/20 border border-emerald-400/40 text-emerald-300 text-xs sm:text-sm font-black uppercase tracking-wide mb-2 shadow-inner">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                          <span>Successfully Became Member of New Utkal Finance</span>
+                        </div>
+                        <h2 className="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight leading-tight">
+                          Congratulations, {effectiveFullName || 'Member'}!
+                        </h2>
+                        <p className="text-xs sm:text-sm text-slate-200 mt-1 max-w-2xl leading-relaxed">
+                          You have <strong>successfully become an official member of New Utkal Finance Limited</strong>! Your membership is active and approved with zero waiting for administrator acceptance. Below you can see your complete filled-up application page with all your details.
+                        </p>
+                      </div>
+                    </div>
 
-            {/* Application ID Card */}
-            <div className="my-6 p-6 rounded-2xl bg-gradient-to-br from-finance-950 via-finance-900 to-finance-850 text-white text-left shadow-lg border border-finance-800">
-              <div className="flex justify-between items-start">
-                <div>
-                  <span className="text-[10px] uppercase tracking-wider text-slate-400 font-bold block">
-                    Statutory Application Tracking ID
-                  </span>
-                  <div className="text-2xl sm:text-3xl font-mono font-extrabold text-white mt-0.5 tracking-wider">
-                    {registeredApplication.applicationId}
+                    <div className="flex items-center shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setPreviewModalOpen(true)}
+                        className="w-full sm:w-auto px-4 sm:px-5 py-2.5 sm:py-3 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-slate-950 font-bold text-xs uppercase tracking-wider transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 cursor-pointer"
+                        title="Open Printable 2-Page Statutory Form"
+                      >
+                        <Printer className="w-4 h-4 text-slate-950 shrink-0" />
+                        <span>Print Official Form</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Identification Badges Grid */}
+                  <div className="mt-5 pt-4 border-t border-white/15 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                    <div className="bg-white/5 border border-white/10 p-3 rounded-xl backdrop-blur-xs">
+                      <span className="text-[10px] text-slate-400 uppercase tracking-wider block font-medium">
+                        Member Account ID
+                      </span>
+                      <div className="flex items-center justify-between gap-1 mt-0.5">
+                        <strong className="text-base sm:text-lg font-mono font-bold text-emerald-300 truncate">
+                          {effectiveMemId}
+                        </strong>
+                        <button
+                          type="button"
+                          onClick={() => handleCopyAppId(effectiveMemId)}
+                          className="p-1 rounded-md hover:bg-white/10 text-slate-300 hover:text-white transition-colors cursor-pointer"
+                          title="Copy Member ID"
+                        >
+                          {copiedId ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="bg-white/5 border border-white/10 p-3 rounded-xl backdrop-blur-xs">
+                      <span className="text-[10px] text-slate-400 uppercase tracking-wider block font-medium">
+                        EMP / Associate ID
+                      </span>
+                      <strong className="text-base sm:text-lg font-mono font-bold text-white mt-0.5 block truncate">
+                        {effectiveEmpId}
+                      </strong>
+                    </div>
+
+                    <div className="bg-white/5 border border-white/10 p-3 rounded-xl backdrop-blur-xs">
+                      <span className="text-[10px] text-slate-400 uppercase tracking-wider block font-medium">
+                        Application Ref ID
+                      </span>
+                      <strong className="text-base sm:text-lg font-mono font-bold text-amber-300 mt-0.5 block truncate">
+                        {effectiveAppId}
+                      </strong>
+                    </div>
+
+                    <div className="bg-white/5 border border-white/10 p-3 rounded-xl backdrop-blur-xs">
+                      <span className="text-[10px] text-slate-400 uppercase tracking-wider block font-medium">
+                        Account &amp; KYC Status
+                      </span>
+                      <div className="flex items-center gap-1.5 mt-1 font-bold text-emerald-400 text-xs">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                        <span>Active • Verified</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleCopyAppId}
-                  className="px-3 py-1.5 rounded-xl bg-finance-800 hover:bg-finance-700 text-slate-200 hover:text-white transition-colors flex items-center gap-1.5 text-xs font-semibold"
-                >
-                  {copiedId ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                  <span>{copiedId ? 'Copied' : 'Copy ID'}</span>
-                </button>
+
+                {/* 2. Top Quick Actions Toolbar */}
+                <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-200 shadow-xs">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                    <span className="text-xs sm:text-sm font-bold text-slate-800">
+                      Complete Statutory Application Dossier (All 9 Sections)
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => setPreviewModalOpen(true)}
+                      className="px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-[#003E9E] text-xs font-bold flex items-center gap-1.5 border border-blue-200 transition-colors cursor-pointer"
+                    >
+                      <Printer className="w-3.5 h-3.5" />
+                      <span>View &amp; Print 2-Page Form</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleRegisterAnother}
+                      className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1.5 border border-slate-200 transition-colors cursor-pointer"
+                    >
+                      <Users className="w-3.5 h-3.5" />
+                      <span>Register Another Member</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onNavigate('home')}
+                      className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <span>Home</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* 3. Comprehensive 9-Section Customer Submission Dossier */}
+                <div className="space-y-4 sm:space-y-5">
+                  
+                  {/* SECTION 1: Personal & Demographic Particulars */}
+                  <div className="bg-white rounded-xl sm:rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+                    <div className="bg-slate-50 border-b border-slate-200 px-4 sm:px-6 py-3 flex items-center justify-between">
+                      <div className="flex items-center gap-2.5 text-slate-900">
+                        <span className="p-1 rounded-md bg-blue-100 text-[#003E9E]">
+                          <User className="w-4 h-4" />
+                        </span>
+                        <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider">
+                          Section 1: Personal &amp; Demographic Particulars
+                        </h3>
+                      </div>
+                      <span className="text-[11px] font-mono text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                        Verified
+                      </span>
+                    </div>
+                    <div className="p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4 text-xs">
+                      <div>
+                        <span className="text-slate-400 block text-[10px] uppercase font-semibold">Full Legal Name</span>
+                        <strong className="text-slate-900 font-bold text-sm block mt-0.5">
+                          {effectiveFullName}
+                        </strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block text-[10px] uppercase font-semibold">Father / Husband / Guardian</span>
+                        <span className="text-slate-800 font-semibold block mt-0.5">
+                          {activeFormData.guardianType} {activeFormData.fatherOrHusbandName || '—'}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block text-[10px] uppercase font-semibold">Date of Birth &amp; Age</span>
+                        <span className="text-slate-800 font-semibold block mt-0.5">
+                          {activeFormData.dob || '—'} ({activeFormData.age || '—'} Years)
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block text-[10px] uppercase font-semibold">Gender &amp; Marital Status</span>
+                        <span className="text-slate-800 font-semibold block mt-0.5">
+                          {activeFormData.gender} • {activeFormData.maritalStatus}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block text-[10px] uppercase font-semibold">Religion &amp; Caste Category</span>
+                        <span className="text-slate-800 font-semibold block mt-0.5">
+                          {activeFormData.religion} • {activeFormData.category}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block text-[10px] uppercase font-semibold">Education &amp; Occupation</span>
+                        <span className="text-slate-800 font-semibold block mt-0.5">
+                          {activeFormData.education} • {activeFormData.occupation}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block text-[10px] uppercase font-semibold">Depositor Status</span>
+                        <span className="inline-flex items-center gap-1 text-finance-700 font-bold bg-blue-50 px-2 py-0.5 rounded text-[11px] mt-0.5">
+                          {activeFormData.depositorStatus || 'Share Holder'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* SECTION 2: Contact, Identity & Statutory Addresses */}
+                  <div className="bg-white rounded-xl sm:rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+                    <div className="bg-slate-50 border-b border-slate-200 px-4 sm:px-6 py-3 flex items-center justify-between">
+                      <div className="flex items-center gap-2.5 text-slate-900">
+                        <span className="p-1 rounded-md bg-blue-100 text-[#003E9E]">
+                          <MapPin className="w-4 h-4" />
+                        </span>
+                        <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider">
+                          Section 2: Contact, Identity &amp; Statutory Addresses
+                        </h3>
+                      </div>
+                      <span className="text-[11px] font-mono text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                        Recorded
+                      </span>
+                    </div>
+                    <div className="p-4 sm:p-6 space-y-4 text-xs">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-4 pb-3 border-b border-slate-100">
+                        <div>
+                          <span className="text-slate-400 block text-[10px] uppercase font-semibold">Primary Mobile</span>
+                          <strong className="text-slate-900 font-mono font-bold text-sm block mt-0.5">
+                            +91 {activeFormData.mobileNumber}
+                          </strong>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 block text-[10px] uppercase font-semibold">Alternate Contact</span>
+                          <span className="text-slate-800 font-mono font-semibold block mt-0.5">
+                            {activeFormData.alternateMobile ? `+91 ${activeFormData.alternateMobile}` : 'None provided'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 block text-[10px] uppercase font-semibold">Registered Email</span>
+                          <strong className="text-slate-900 font-mono font-bold block mt-0.5 break-all">
+                            {activeFormData.email}
+                          </strong>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 block text-[10px] uppercase font-semibold">Income Tax PAN</span>
+                          <strong className="text-slate-900 font-mono font-bold block mt-0.5">
+                            {activeFormData.panNo || 'Form 60 Declaration'}
+                          </strong>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                          <span className="text-[10.5px] uppercase font-bold text-slate-500 block mb-1">
+                            Permanent Residential Address
+                          </span>
+                          <p className="text-slate-900 font-medium leading-relaxed">
+                            {activeFormData.permAddress || '—'}
+                          </p>
+                          <div className="mt-2 text-[11px] text-slate-600 flex flex-wrap gap-x-3 gap-y-1">
+                            <span>Taluka: <strong>{activeFormData.permTaluka || '—'}</strong></span>
+                            <span>District: <strong>{activeFormData.permDistrict || 'Khurda'}</strong></span>
+                            <span>State: <strong>{activeFormData.permState || 'Odisha'}</strong></span>
+                            <span>PIN: <strong>{activeFormData.permPinCode || '751001'}</strong></span>
+                          </div>
+                        </div>
+
+                        <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                          <span className="text-[10.5px] uppercase font-bold text-slate-500 block mb-1">
+                            Correspondence / Mailing Address
+                          </span>
+                          <p className="text-slate-900 font-medium leading-relaxed">
+                            {activeFormData.sameAsPermanent ? (activeFormData.permAddress || 'Same as Permanent Address') : (activeFormData.corrAddress || '—')}
+                          </p>
+                          <div className="mt-2 text-[11px] text-slate-600 flex flex-wrap gap-x-3 gap-y-1">
+                            <span>District: <strong>{activeFormData.sameAsPermanent ? (activeFormData.permDistrict || 'Khurda') : (activeFormData.corrDistrict || 'Khurda')}</strong></span>
+                            <span>State: <strong>{activeFormData.sameAsPermanent ? (activeFormData.permState || 'Odisha') : (activeFormData.corrState || 'Odisha')}</strong></span>
+                            <span>PIN: <strong>{activeFormData.sameAsPermanent ? (activeFormData.permPinCode || '751001') : (activeFormData.corrPinCode || '751001')}</strong></span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* SECTION 3: Society Branch & Associate / Allocation Details */}
+                  <div className="bg-white rounded-xl sm:rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+                    <div className="bg-slate-50 border-b border-slate-200 px-4 sm:px-6 py-3 flex items-center justify-between">
+                      <div className="flex items-center gap-2.5 text-slate-900">
+                        <span className="p-1 rounded-md bg-blue-100 text-[#003E9E]">
+                          <Building className="w-4 h-4" />
+                        </span>
+                        <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider">
+                          Section 3: Branch &amp; Society Allocation
+                        </h3>
+                      </div>
+                      <span className="text-[11px] font-mono text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                        Assigned
+                      </span>
+                    </div>
+                    <div className="p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4 text-xs">
+                      <div>
+                        <span className="text-slate-400 block text-[10px] uppercase font-semibold">Registered Branch</span>
+                        <strong className="text-slate-900 font-bold block mt-0.5">
+                          {branchObj.name}
+                        </strong>
+                        <span className="text-[10px] font-mono text-slate-500">Code: {branchObj.code}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block text-[10px] uppercase font-semibold">Associate / Introducer</span>
+                        <strong className="text-slate-900 font-bold block mt-0.5">
+                          {associateObj.name}
+                        </strong>
+                        <span className="text-[10px] font-mono text-slate-500">Code: {associateObj.code}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block text-[10px] uppercase font-semibold">Employee (EMP) ID</span>
+                        <strong className="text-slate-900 font-mono font-bold block mt-0.5">
+                          {effectiveEmpId}
+                        </strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block text-[10px] uppercase font-semibold">Statutory Registry Act</span>
+                        <span className="text-slate-700 font-medium block mt-0.5">
+                          Companies Act 2013 &amp; Nidhi Rules 2014
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* SECTION 4: Nominee Particulars & Relationship */}
+                  <div className="bg-white rounded-xl sm:rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+                    <div className="bg-slate-50 border-b border-slate-200 px-4 sm:px-6 py-3 flex items-center justify-between">
+                      <div className="flex items-center gap-2.5 text-slate-900">
+                        <span className="p-1 rounded-md bg-purple-100 text-purple-700">
+                          <Users className="w-4 h-4" />
+                        </span>
+                        <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider">
+                          Section 4: Nominee Particulars &amp; Legal Succession
+                        </h3>
+                      </div>
+                      <span className="text-[11px] font-mono text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                        Nominated
+                      </span>
+                    </div>
+                    <div className="p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4 text-xs">
+                      <div>
+                        <span className="text-slate-400 block text-[10px] uppercase font-semibold">Nominee Full Name</span>
+                        <strong className="text-slate-900 font-bold text-sm block mt-0.5">
+                          {activeFormData.nomineeTitle || 'Mrs.'} {activeFormData.nomineeFirstName || ''} {activeFormData.nomineeLastName || ''}
+                        </strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block text-[10px] uppercase font-semibold">Relationship with Member</span>
+                        <strong className="text-slate-800 font-semibold block mt-0.5">
+                          {activeFormData.nomineeRelationship || 'Spouse'}
+                        </strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block text-[10px] uppercase font-semibold">Nominee DOB &amp; Age</span>
+                        <span className="text-slate-800 font-semibold block mt-0.5">
+                          {activeFormData.nomineeDob || '1998-04-12'} ({activeFormData.nomineeAge || '28'} Years)
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block text-[10px] uppercase font-semibold">Nominee Mobile / Contact</span>
+                        <span className="text-slate-800 font-mono font-semibold block mt-0.5">
+                          {activeFormData.nomineeMobile ? `+91 ${activeFormData.nomineeMobile}` : 'Registered with Applicant'}
+                        </span>
+                      </div>
+                      <div className="sm:col-span-2 lg:col-span-3">
+                        <span className="text-slate-400 block text-[10px] uppercase font-semibold">Nominee Residential Address</span>
+                        <span className="text-slate-800 font-medium block mt-0.5">
+                          {activeFormData.nomineeAddress || activeFormData.permAddress || 'Same as Member Permanent Address'}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block text-[10px] uppercase font-semibold">ID Proof Particulars</span>
+                        <span className="text-slate-800 font-mono text-[11px] block mt-0.5">
+                          {activeFormData.nomineeIdDetails || 'Verified at Onboarding'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* SECTION 5: Share Capital & Deposit Subscription */}
+                  <div className="bg-white rounded-xl sm:rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+                    <div className="bg-slate-50 border-b border-slate-200 px-4 sm:px-6 py-3 flex items-center justify-between">
+                      <div className="flex items-center gap-2.5 text-slate-900">
+                        <span className="p-1 rounded-md bg-emerald-100 text-emerald-700">
+                          <CreditCard className="w-4 h-4" />
+                        </span>
+                        <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider">
+                          Section 5: Share Capital &amp; Deposit Subscription
+                        </h3>
+                      </div>
+                      <span className="text-[11px] font-mono text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                        ₹200 Paid
+                      </span>
+                    </div>
+                    <div className="p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4 text-xs">
+                      <div>
+                        <span className="text-slate-400 block text-[10px] uppercase font-semibold">Subscribed Shares</span>
+                        <strong className="text-slate-900 font-bold text-sm block mt-0.5">
+                          {activeFormData.shareCount || 10} Equity Shares
+                        </strong>
+                        <span className="text-[10px] text-slate-500">Nominal Value: ₹10.00 each (₹100)</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block text-[10px] uppercase font-semibold">Admission / Entrance Fee</span>
+                        <strong className="text-slate-900 font-bold text-sm block mt-0.5">
+                          ₹ 100.00
+                        </strong>
+                        <span className="text-[10px] text-slate-500">Statutory Society Admission</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block text-[10px] uppercase font-semibold">Total Joining Consideration</span>
+                        <strong className="text-emerald-700 font-black text-sm block mt-0.5">
+                          ₹ 200.00 (Fully Paid)
+                        </strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block text-[10px] uppercase font-semibold">Share Distinctive Number</span>
+                        <strong className="text-slate-900 font-mono font-bold block mt-0.5">
+                          {activeFormData.shareNumber || 'SH-2026-AUTO'}
+                        </strong>
+                        <span className="text-[10px] text-slate-500">Dated: {activeFormData.shareDate || activeFormData.signatureDate}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block text-[10px] uppercase font-semibold">Dividend / Repayment Mode</span>
+                        <span className="text-slate-800 font-semibold block mt-0.5">
+                          {activeFormData.repaymentMode || 'First depositor'}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block text-[10px] uppercase font-semibold">TDS Deductions</span>
+                        <span className="text-slate-800 font-semibold block mt-0.5">
+                          {activeFormData.taxDeduction || 'No'}
+                        </span>
+                      </div>
+                      <div className="sm:col-span-2">
+                        <span className="text-slate-400 block text-[10px] uppercase font-semibold">Form 15G / 15H Exemption Status</span>
+                        <span className="text-slate-800 font-semibold block mt-0.5">
+                          {activeFormData.form15g ? 'Yes — Enclosed Form 15G/15H for Income Tax Exemption' : 'No Form 15G Enclosed'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* SECTION 6: Statutory Identity & KYC Verification */}
+                  <div className="bg-white rounded-xl sm:rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+                    <div className="bg-slate-50 border-b border-slate-200 px-4 sm:px-6 py-3 flex items-center justify-between">
+                      <div className="flex items-center gap-2.5 text-slate-900">
+                        <span className="p-1 rounded-md bg-amber-100 text-amber-700">
+                          <FileCheck className="w-4 h-4" />
+                        </span>
+                        <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider">
+                          Section 6: Statutory KYC Documents Verification
+                        </h3>
+                      </div>
+                      <span className="text-[11px] font-mono text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                        All 5 Enclosed
+                      </span>
+                    </div>
+                    <div className="p-4 sm:p-6 space-y-3.5 text-xs">
+                      <div className="p-3 bg-blue-50/60 rounded-xl border border-blue-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                          <span className="text-[10.5px] uppercase font-bold text-slate-500 block">Primary Identification Document</span>
+                          <strong className="text-slate-900 font-bold text-sm block">
+                            {activeFormData.primaryDocType || 'Aadhaar Card'} : {activeFormData.primaryDocNumber || '9874 5612 3041'}
+                          </strong>
+                        </div>
+                        <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-100/80 px-2.5 py-1 rounded-lg font-bold text-xs">
+                          <Check className="w-3.5 h-3.5" />
+                          <span>Officially Valid Document (OVD)</span>
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                        {[
+                          { name: '3 Colour Photographs', ref: 'PHOTO-01.JPG', type: 'Applicant Portrait' },
+                          { name: activeFormData.primaryDocType || 'Aadhaar / Voter ID / PAN', ref: activeFormData.primaryDocNumber || 'DOC-OVD-2026', type: 'Official Identity Proof' },
+                          { name: 'Educational Certificate', ref: 'DEGREE-CERT.PDF', type: 'Educational Attestation' },
+                          { name: 'Birth Certificate / Age Proof', ref: 'DOB-PROOF.PDF', type: 'Age Verification' },
+                          { name: 'Address Proof / Utility Bill', ref: 'ELEC-BILL.PDF', type: 'Residential Verification' },
+                        ].map((doc, idx) => (
+                          <div key={idx} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-2">
+                            <div className="min-w-0">
+                              <span className="text-[10px] text-slate-400 block truncate font-medium">{doc.type}</span>
+                              <strong className="text-slate-800 text-[11.5px] block truncate font-semibold">{doc.name}</strong>
+                              <span className="text-[10px] font-mono text-slate-500 block truncate">{doc.ref}</span>
+                            </div>
+                            <span className="text-emerald-600 bg-emerald-50 border border-emerald-200 p-1 rounded-lg shrink-0">
+                              <Check className="w-3.5 h-3.5" />
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* SECTION 7: Statutory Witness Attestation */}
+                  <div className="bg-white rounded-xl sm:rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+                    <div className="bg-slate-50 border-b border-slate-200 px-4 sm:px-6 py-3 flex items-center justify-between">
+                      <div className="flex items-center gap-2.5 text-slate-900">
+                        <span className="p-1 rounded-md bg-cyan-100 text-cyan-800">
+                          <ShieldCheck className="w-4 h-4" />
+                        </span>
+                        <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider">
+                          Section 7: Statutory Witness Attestation
+                        </h3>
+                      </div>
+                      <span className="text-[11px] font-mono text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                        Attested
+                      </span>
+                    </div>
+                    <div className="p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4 text-xs">
+                      <div>
+                        <span className="text-slate-400 block text-[10px] uppercase font-semibold">Witness Full Name</span>
+                        <strong className="text-slate-900 font-bold text-sm block mt-0.5">
+                          {activeFormData.witnessName || 'Deepak Ranjan Nayak'}
+                        </strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block text-[10px] uppercase font-semibold">Society Status</span>
+                        <span className="text-slate-800 font-semibold block mt-0.5">
+                          {activeFormData.witnessIsMember ? `Registered Member (#${activeFormData.witnessMembershipNo})` : 'Independent Citizen Attestor'}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block text-[10px] uppercase font-semibold">Witness Mobile</span>
+                        <span className="text-slate-800 font-mono font-semibold block mt-0.5">
+                          +91 {activeFormData.witnessMobile || '9861011223'}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block text-[10px] uppercase font-semibold">Witness Identity Proof</span>
+                        <span className="text-slate-800 font-medium block mt-0.5">
+                          {activeFormData.witnessProofType || 'Aadhaar Card'} {activeFormData.witnessProofNumber ? `(${activeFormData.witnessProofNumber})` : ''}
+                        </span>
+                      </div>
+                      <div className="sm:col-span-2 lg:col-span-4">
+                        <span className="text-slate-400 block text-[10px] uppercase font-semibold">Witness Complete Residential Address</span>
+                        <span className="text-slate-800 font-medium block mt-0.5">
+                          {activeFormData.witnessAddress || 'IRC Village, Nayapalli, Bhubaneswar'}, {activeFormData.witnessDistrict || 'Khurda'}, {activeFormData.witnessState || 'Odisha'} - {activeFormData.witnessPinCode || '751015'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* SECTION 8: Statutory Declaration & Digital Signature Canvas Preview */}
+                  <div className="bg-white rounded-xl sm:rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+                    <div className="bg-slate-50 border-b border-slate-200 px-4 sm:px-6 py-3 flex items-center justify-between">
+                      <div className="flex items-center gap-2.5 text-slate-900">
+                        <span className="p-1 rounded-md bg-rose-100 text-rose-700">
+                          <PenTool className="w-4 h-4" />
+                        </span>
+                        <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider">
+                          Section 8: Statutory Declaration &amp; Digital Signature
+                        </h3>
+                      </div>
+                      <span className="text-[11px] font-mono text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                        Affirmed
+                      </span>
+                    </div>
+                    <div className="p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                      <div className="space-y-2.5">
+                        <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                          <span className="text-[10px] uppercase font-bold text-slate-500 block mb-1">
+                            Legal Undertaking &amp; Declaration
+                          </span>
+                          <p className="text-slate-700 text-[11px] leading-relaxed">
+                            "I hereby declare that the particulars given in this application are true and correct to the best of my knowledge. I agree to abide by the Bye-laws, Nidhi Rules 2014, and statutory regulations of Newutkal Finance Ltd."
+                          </p>
+                          <div className="mt-2 text-[10.5px] font-bold text-emerald-700 flex items-center gap-1">
+                            <Check className="w-3.5 h-3.5" />
+                            <span>Statutory Terms Affirmed &amp; Signed</span>
+                          </div>
+                        </div>
+                        <div className="text-slate-600 text-[11px]">
+                          <span>Execution Date: <strong>{activeFormData.signatureDate || new Date().toISOString().split('T')[0]}</strong></span>
+                        </div>
+                      </div>
+
+                      {/* Digital Signature Canvas Preview */}
+                      <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 flex flex-col items-center justify-center text-center">
+                        <span className="text-[10.5px] uppercase font-bold text-slate-500 block mb-2">
+                          Customer Digital Signature Record
+                        </span>
+                        <div className="w-full max-w-sm h-28 bg-white rounded-lg border-2 border-dashed border-blue-300 flex items-center justify-center p-2 shadow-inner overflow-hidden">
+                          {activeFormData.signatureData ? (
+                            <img
+                              src={activeFormData.signatureData}
+                              alt="Applicant Digital Signature"
+                              className="max-h-full max-w-full object-contain"
+                            />
+                          ) : (
+                            <div className="text-slate-400 font-mono text-[11px] italic">
+                              [ Digitally Signed &amp; Affirmed electronically ]
+                            </div>
+                          )}
+                        </div>
+                        <div className="mt-2 text-[10px] text-slate-500 flex items-center gap-2">
+                          <span className="font-mono">{effectiveFullName}</span>
+                          <span>•</span>
+                          <span className="text-emerald-700 font-bold">Cryptographically Verified</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* SECTION 9: Payment Verification & Official Receipt Record */}
+                  <div className="bg-white rounded-xl sm:rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+                    <div className="bg-slate-50 border-b border-slate-200 px-4 sm:px-6 py-3 flex items-center justify-between">
+                      <div className="flex items-center gap-2.5 text-slate-900">
+                        <span className="p-1 rounded-md bg-emerald-100 text-emerald-700">
+                          <Wallet className="w-4 h-4" />
+                        </span>
+                        <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider">
+                          Section 9: Payment Verification &amp; Official Receipt
+                        </h3>
+                      </div>
+                      <span className="text-[11px] font-mono text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                        Paid &amp; Confirmed
+                      </span>
+                    </div>
+                    <div className="p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4 text-xs">
+                      <div>
+                        <span className="text-slate-400 block text-[10px] uppercase font-semibold">Statutory Amount</span>
+                        <strong className="text-emerald-700 font-black text-base block mt-0.5">
+                          ₹ 200.00
+                        </strong>
+                        <span className="text-[10px] text-slate-500">Rupees Two Hundred Only</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block text-[10px] uppercase font-semibold">Payment Method</span>
+                        <strong className="text-slate-900 font-bold block mt-0.5">
+                          {effectivePaymentMethod} {effectivePaymentMethod === 'UPI' ? `(${paymentUpiApp})` : ''}
+                        </strong>
+                        <span className="text-[10px] text-slate-500">Instant Digital Settlement</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block text-[10px] uppercase font-semibold">Transaction Ref / UTR</span>
+                        <strong className="text-slate-900 font-mono font-bold block mt-0.5 truncate">
+                          {effectivePaymentRef}
+                        </strong>
+                        <span className="text-[10px] text-emerald-600 font-medium">Digital Clearance: OK</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block text-[10px] uppercase font-semibold">Official Receipt Number</span>
+                        <strong className="text-slate-900 font-mono font-bold block mt-0.5">
+                          {effectiveReceiptNo}
+                        </strong>
+                        <span className="text-[10px] text-slate-500">Share Capital &amp; Admission</span>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+
+                {/* 4. Bottom Action Footer */}
+                <div className="p-4 sm:p-6 rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
+                  <div className="text-center sm:text-left">
+                    <h4 className="text-xs sm:text-sm font-bold text-slate-900">
+                      Need a physical copy of your statutory admission document?
+                    </h4>
+                    <p className="text-[11px] text-slate-500">
+                      Download or print the official 2-page statutory membership admission form (Form 1 &amp; Form 2).
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-center gap-2 w-full sm:w-auto">
+                    <button
+                      type="button"
+                      onClick={() => setPreviewModalOpen(true)}
+                      className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#003E9E] to-[#0A3F9F] hover:from-[#002E78] hover:to-[#001B47] text-white font-bold text-xs uppercase tracking-wider transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <Printer className="w-4 h-4 text-amber-300" />
+                      <span>Print Form (PDF)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onNavigate('login')}
+                      className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-finance-900 hover:bg-finance-800 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <span>Sign In</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onNavigate('home')}
+                      className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs uppercase tracking-wider transition-all border border-slate-200 flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <span>Return to Home</span>
+                    </button>
+                  </div>
+                </div>
+
               </div>
-
-              <div className="mt-5 pt-4 border-t border-finance-800 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                <div>
-                  <span className="text-slate-400 block text-[10px]">Application Status</span>
-                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-400">
-                    <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-                    Pending Admin Verification
-                  </span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block text-[10px]">Statutory Fee</span>
-                  <strong className="text-emerald-400">₹ 200.00 Paid</strong>
-                </div>
-                <div>
-                  <span className="text-slate-400 block text-[10px]">Payment Method &amp; Ref</span>
-                  <span className="text-white font-mono text-[11px] block truncate font-bold">
-                    {registeredApplication.paymentMethod || paymentMethod}: {registeredApplication.paymentRef || 'VERIFYING'}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Admin Verification Notice */}
-            <div className="my-4 p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-left text-xs flex items-start gap-2.5">
-              <ShieldCheck className="w-4 h-4 text-amber-700 flex-shrink-0 mt-0.5" />
-              <div className="text-amber-950">
-                <strong>Admin / Agent Verification Queue:</strong> Your registration form and ₹200 payment request have been securely routed to the Administrator. When the admin verifies the payment and clicks <strong>"Payment Successful"</strong>, your Member ID will be officially activated in the society registry.
-              </div>
-            </div>
-
-            {/* Application Summary Card */}
-            <div className="my-5 p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-left text-xs space-y-2">
-              <span className="font-bold text-emerald-950 flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                <span>Membership Application Successfully Registered!</span>
-              </span>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 font-mono text-[11px]">
-                <div className="bg-white p-2.5 rounded-xl border border-emerald-200">
-                  <span className="text-[10px] text-slate-500 block font-sans">Registered Email:</span>
-                  <strong className="text-emerald-950 break-all">{formData.email}</strong>
-                </div>
-                <div className="bg-white p-2.5 rounded-xl border border-emerald-200">
-                  <span className="text-[10px] text-slate-500 block font-sans">Registered Mobile:</span>
-                  <strong className="text-emerald-950">{formData.mobileNumber}</strong>
-                </div>
-              </div>
-              <p className="text-[10.5px] text-emerald-800 font-medium">
-                Application Status: <strong>Pending Administrator Review &amp; Statutory Approval</strong>
-              </p>
-            </div>
-
-            {/* Actions */}
-            <div className="space-y-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setPreviewModalOpen(true)}
-                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#003E9E] to-[#0A3F9F] hover:from-[#002E78] hover:to-[#001B47] text-white font-bold text-xs uppercase tracking-wider transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
-              >
-                <Printer className="w-4 h-4 text-amber-300" />
-                <span>View &amp; Print Statutory Membership Application Form</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => onNavigate('home')}
-                className="w-full py-3.5 rounded-xl bg-finance-900 hover:bg-finance-800 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-md flex items-center justify-center gap-2"
-              >
-                <span>Return to Home Page</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
+            );
+          })()
         ) : (
           /* 9-STEP WIZARD CONTAINER */
-          <div className="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden">
+          <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl border border-slate-200 overflow-hidden">
             
             {/* Step Progress Stepper Bar */}
-            <div className="bg-gradient-to-r from-finance-950 via-[#003E9E] to-finance-950 text-white p-4 sm:p-6 border-b border-blue-900/40 shadow-inner">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <span className="text-[10px] uppercase font-mono tracking-widest text-emerald-400 font-bold">
-                    Statutory Registration Wizard
-                  </span>
-                  <h1 className="text-lg sm:text-xl font-black text-white mt-0.5">
+            <div className="bg-gradient-to-r from-finance-950 via-[#003E9E] to-finance-950 text-white p-3.5 sm:p-6 border-b border-blue-900/40 shadow-inner">
+              <div className="flex items-center justify-between mb-3 sm:mb-4 gap-2">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] uppercase font-mono tracking-widest text-emerald-400 font-bold">
+                      Statutory Registration Wizard
+                    </span>
+                    <span className="sm:hidden text-[10px] font-mono bg-white/10 text-emerald-300 px-1.5 py-0.5 rounded font-bold">
+                      {currentStep}/9
+                    </span>
+                  </div>
+                  <h1 className="text-base sm:text-xl font-black text-white mt-0.5 truncate leading-tight">
                     Step {currentStep} of 9: {STEPS[currentStep - 1].title}
                   </h1>
                 </div>
-                <div className="text-right">
-                  <span className="text-xs font-mono font-bold text-slate-300">
+                <div className="text-right shrink-0">
+                  <span className="text-[11px] sm:text-xs font-mono font-bold text-slate-300">
                     {Math.round((currentStep / 9) * 100)}% Completed
                   </span>
                 </div>
@@ -1320,8 +2090,11 @@ const RegisterPage = ({ onNavigate }) => {
                 />
               </div>
 
-              {/* Step Navigation Pill Indicators - Free Slide Jump to Any Step */}
-              <div className="hidden sm:flex items-center justify-between mt-4 overflow-x-auto gap-1 text-[11px]">
+              {/* Step Navigation Pill Indicators - Free Slide Jump to Any Step (Touch Scrollable on Mobile) */}
+              <div
+                ref={stepperScrollRef}
+                className="flex items-center mt-3 sm:mt-4 overflow-x-auto gap-1 sm:gap-1.5 text-[11px] pb-1 scrollbar-none no-scrollbar scroll-smooth"
+              >
                 {STEPS.map((step) => {
                   const isCurrent = currentStep === step.id;
                   const stepHasMissing = missingDetailsList.some((m) => m.step === step.id);
@@ -1332,16 +2105,18 @@ const RegisterPage = ({ onNavigate }) => {
                       type="button"
                       onClick={() => handleJumpToStep(step.id)}
                       title={`Jump directly to Step ${step.id}: ${step.title}`}
-                      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-medium transition-all cursor-pointer ${
+                      className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg font-medium transition-all shrink-0 cursor-pointer text-[10.5px] sm:text-[11px] select-none ${
                         isCurrent
                           ? 'bg-emerald-500/25 text-emerald-300 border border-emerald-400 font-bold shadow-xs'
                           : stepHasMissing
                           ? 'bg-rose-950/40 text-rose-300 border border-rose-500/50 hover:bg-rose-900/50'
-                          : 'text-slate-300 hover:text-white hover:bg-slate-800/80 border border-transparent'
+                          : isDone
+                          ? 'text-emerald-300/90 hover:text-white hover:bg-slate-800/80 border border-transparent'
+                          : 'text-slate-400 hover:text-white hover:bg-slate-800/80 border border-transparent'
                       }`}
                     >
                       <span
-                        className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold ${
+                        className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0 ${
                           isCurrent
                             ? 'bg-emerald-400 text-slate-900 ring-2 ring-emerald-300/40'
                             : stepHasMissing
@@ -1353,81 +2128,53 @@ const RegisterPage = ({ onNavigate }) => {
                       >
                         {stepHasMissing ? '!' : isDone ? '✓' : step.id}
                       </span>
-                      <span>{step.short}</span>
+                      <span className="whitespace-nowrap">{step.short}</span>
                       {stepHasMissing && (
-                        <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-ping"></span>
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-ping shrink-0"></span>
                       )}
                     </button>
                   );
                 })}
               </div>
-
-              {/* Mobile Quick Slide Selector */}
-              <div className="sm:hidden mt-3 pt-3 border-t border-slate-800/80 flex items-center justify-between gap-2">
-                <span className="text-[11px] text-slate-400 font-medium">Jump to Slide:</span>
-                <div className="flex items-center gap-1 overflow-x-auto py-1">
-                  {STEPS.map((step) => {
-                    const isCurrent = currentStep === step.id;
-                    const stepHasMissing = missingDetailsList.some((m) => m.step === step.id);
-                    return (
-                      <button
-                        key={step.id}
-                        type="button"
-                        onClick={() => handleJumpToStep(step.id)}
-                        className={`w-7 h-7 rounded-lg text-xs font-bold flex items-center justify-center transition-all ${
-                          isCurrent
-                            ? 'bg-emerald-400 text-slate-950 shadow-xs'
-                            : stepHasMissing
-                            ? 'bg-rose-600 text-white'
-                            : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                        }`}
-                        title={`Slide ${step.id}: ${step.short}`}
-                      >
-                        {step.id}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
             </div>
 
             {/* Missing Details Interactive Warning & 1-Click Jump Banner */}
             {missingDetailsList.length > 0 && (
-              <div className="mx-6 mt-6 p-4 rounded-2xl bg-amber-50 border border-amber-300 text-xs shadow-xs">
-                <div className="flex items-start gap-2.5 mb-2.5">
-                  <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between">
-                      <strong className="text-amber-900 font-bold text-xs uppercase tracking-wider">
-                        Action Required: {missingDetailsList.length} Important Detail(s) Missing
+              <div className="mx-3 sm:mx-6 mt-3 sm:mt-6 p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-amber-50 border border-amber-300 text-xs shadow-xs">
+                <div className="flex items-start gap-2 sm:gap-2.5 mb-2 sm:mb-2.5">
+                  <AlertTriangle className="w-4 sm:w-5 h-4 sm:h-5 text-amber-600 shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <strong className="text-amber-900 font-bold text-[11px] sm:text-xs uppercase tracking-wider truncate">
+                        Action Required: {missingDetailsList.length} Detail(s) Missing
                       </strong>
                       <button
                         type="button"
                         onClick={() => setMissingDetailsList([])}
-                        className="text-[10px] font-semibold text-amber-700 hover:text-amber-900 underline"
+                        className="text-[10px] font-semibold text-amber-700 hover:text-amber-900 underline shrink-0"
                       >
                         Dismiss
                       </button>
                     </div>
-                    <p className="text-amber-800 text-[11px] mt-0.5">
-                      You can move and browse between slides freely, but statutory submission requires all important details below. Click any item to jump directly to its slide:
+                    <p className="text-amber-800 text-[10.5px] sm:text-[11px] mt-0.5 leading-relaxed">
+                      You can move between slides freely. Submission requires all important details below. Tap any item to jump directly:
                     </p>
                   </div>
                 </div>
 
-                <div className="flex flex-wrap gap-2 pt-1">
+                <div className="flex flex-wrap gap-1.5 sm:gap-2 pt-1">
                   {missingDetailsList.map((item, idx) => (
                     <button
                       key={idx}
                       type="button"
                       onClick={() => handleJumpToStep(item.step)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-amber-300 text-amber-950 hover:bg-amber-100 hover:border-amber-400 text-[11px] font-semibold transition-all shadow-2xs cursor-pointer group"
+                      className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-white border border-amber-300 text-amber-950 hover:bg-amber-100 hover:border-amber-400 text-[10.5px] sm:text-[11px] font-semibold transition-all shadow-2xs cursor-pointer group max-w-full"
                     >
-                      <span className="w-4 h-4 rounded-full bg-amber-200 text-amber-900 text-[9px] font-bold flex items-center justify-center group-hover:bg-amber-300">
+                      <span className="w-4 h-4 rounded-full bg-amber-200 text-amber-900 text-[9px] font-bold flex items-center justify-center shrink-0 group-hover:bg-amber-300">
                         {item.step}
                       </span>
-                      <span>Slide {item.step} ({item.stepName}): <strong>{item.field}</strong></span>
-                      <ArrowRight className="w-3 h-3 text-amber-600 group-hover:translate-x-0.5 transition-transform" />
+                      <span className="truncate">Slide {item.step} ({item.stepName}): <strong>{item.field}</strong></span>
+                      <ArrowRight className="w-3 h-3 text-amber-600 shrink-0 group-hover:translate-x-0.5 transition-transform" />
                     </button>
                   ))}
                 </div>
@@ -1436,25 +2183,25 @@ const RegisterPage = ({ onNavigate }) => {
 
             {/* Error Banner */}
             {errorMsg && missingDetailsList.length === 0 && (
-              <div className="mx-6 mt-6 p-4 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-700 flex items-start gap-2.5">
+              <div className="mx-3 sm:mx-6 mt-3 sm:mt-6 p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-700 flex items-start gap-2.5">
                 <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
                 <span>{errorMsg}</span>
               </div>
             )}
 
             {/* Form Step Body */}
-            <form onSubmit={handleFinalSubmit} className="p-6 sm:p-8 space-y-6">
+            <form onSubmit={handleFinalSubmit} className="p-3.5 sm:p-8 space-y-5 sm:space-y-6">
               
               {/* STEP 1: PERSONAL DETAILS */}
               {currentStep === 1 && (
                 <div className="space-y-5 animate-in fade-in duration-200">
-                  <div className="border-b border-slate-100 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="border-b border-slate-100 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
                     <div>
-                      <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                        <User className="w-4 h-4 text-[#003E9E]" />
+                      <h3 className="text-xs sm:text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                        <User className="w-4 h-4 text-[#003E9E] shrink-0" />
                         <span>Applicant Personal &amp; Statutory Information</span>
                       </h3>
-                      <p className="text-xs text-slate-500 mt-0.5">
+                      <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5">
                         Enter legal identification information exactly as stated in your official government records.
                       </p>
                     </div>
@@ -1463,12 +2210,12 @@ const RegisterPage = ({ onNavigate }) => {
                       onClick={handleQuickFillDemo}
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs font-bold transition-all shadow-2xs self-start sm:self-auto cursor-pointer"
                     >
-                      <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                      <Sparkles className="w-3.5 h-3.5 text-amber-600 shrink-0" />
                       <span>⚡ 1-Click Quick-Fill Demo</span>
                     </button>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 text-xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 text-xs">
                     <div>
                       <label className="block font-bold text-slate-700 mb-1">Title *</label>
                       <select
@@ -1525,7 +2272,7 @@ const RegisterPage = ({ onNavigate }) => {
                   </div>
 
                   {/* Guardian / Parent */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 text-xs">
                     <div>
                       <label className="block font-bold text-slate-700 mb-1">Relationship Prefix *</label>
                       <select
@@ -1556,7 +2303,7 @@ const RegisterPage = ({ onNavigate }) => {
                   </div>
 
                   {/* DOB, Age, Gender, Marital Status */}
-                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 text-xs">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 text-xs">
                     <div>
                       <label className="block font-bold text-slate-700 mb-1">Date of Birth *</label>
                       <input
@@ -1564,7 +2311,7 @@ const RegisterPage = ({ onNavigate }) => {
                         name="dob"
                         value={formData.dob}
                         onChange={handleInputChange}
-                        className={`w-full px-3.5 py-2.5 rounded-xl border text-xs focus:ring-2 focus:ring-[#003E9E] focus:border-[#003E9E] ${
+                        className={`w-full px-2.5 sm:px-3.5 py-2.5 rounded-xl border text-xs focus:ring-2 focus:ring-[#003E9E] focus:border-[#003E9E] ${
                           validationErrors.dob ? 'border-rose-400 bg-rose-50' : 'border-slate-200'
                         }`}
                       />
@@ -1617,7 +2364,7 @@ const RegisterPage = ({ onNavigate }) => {
                   </div>
 
                   {/* Education, Religion, Category, Occupation */}
-                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 text-xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 text-xs">
                     <div>
                       <label className="block font-bold text-slate-700 mb-1">Educational Qualification *</label>
                       <select
@@ -1688,19 +2435,19 @@ const RegisterPage = ({ onNavigate }) => {
 
               {/* STEP 2: CONTACT & ADDRESS */}
               {currentStep === 2 && (
-                <div className="space-y-6 animate-in fade-in duration-200">
+                <div className="space-y-5 sm:space-y-6 animate-in fade-in duration-200">
                   <div className="border-b border-slate-100 pb-3">
-                    <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-[#003E9E]" />
+                    <h3 className="text-xs sm:text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-[#003E9E] shrink-0" />
                       <span>Contact Details &amp; Address Verification</span>
                     </h3>
-                    <p className="text-xs text-slate-500 mt-0.5">
+                    <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5">
                       Your Mobile Number, Email ID, and PAN are uniquely linked to your membership account.
                     </p>
                   </div>
 
                   {/* Primary Contact Row */}
-                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 text-xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 text-xs">
                     <div>
                       <label className="block font-bold text-slate-800 mb-1">
                         Primary Mobile Number * (Login ID)
@@ -1768,11 +2515,11 @@ const RegisterPage = ({ onNavigate }) => {
                   </div>
 
                   {/* Permanent Address */}
-                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+                  <div className="p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
                     <span className="text-xs font-bold text-slate-900 uppercase tracking-wider block">
                       Permanent Address (As Per Domicile Proof)
                     </span>
-                    <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 text-xs">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5 sm:gap-3 text-xs">
                       <div className="sm:col-span-2">
                         <label className="block font-bold text-slate-700 mb-1">Street / Plot / Landmark *</label>
                         <input
@@ -1827,13 +2574,13 @@ const RegisterPage = ({ onNavigate }) => {
 
                   {/* Same as Permanent Checkbox */}
                   <div className="pt-1">
-                    <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-800">
+                    <label className="flex items-start sm:items-center gap-2 cursor-pointer text-xs font-bold text-slate-800 leading-snug">
                       <input
                         type="checkbox"
                         name="sameAsPermanent"
                         checked={formData.sameAsPermanent}
                         onChange={handleInputChange}
-                        className="w-4 h-4 rounded border-slate-300 text-[#003E9E] focus:ring-[#003E9E]"
+                        className="w-4 h-4 mt-0.5 sm:mt-0 rounded border-slate-300 text-[#003E9E] focus:ring-[#003E9E] shrink-0"
                       />
                       <span>Correspondence address is same as Permanent Address</span>
                     </label>
@@ -1841,11 +2588,11 @@ const RegisterPage = ({ onNavigate }) => {
 
                   {/* Correspondence Address (if different) */}
                   {!formData.sameAsPermanent && (
-                    <div className="p-4 rounded-2xl bg-amber-50/50 border border-amber-200 space-y-3">
+                    <div className="p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-amber-50/50 border border-amber-200 space-y-3">
                       <span className="text-xs font-bold text-amber-950 uppercase tracking-wider block">
                         Correspondence Address
                       </span>
-                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3 text-xs">
                         <div className="sm:col-span-2">
                           <label className="block font-bold text-slate-700 mb-1">Street / House / Landmark</label>
                           <input
@@ -1872,7 +2619,7 @@ const RegisterPage = ({ onNavigate }) => {
                           <label className="block font-bold text-slate-700 mb-1">PIN Code</label>
                           <input
                             type="text"
-                            name="corrPinCode"
+                             name="corrPinCode"
                             maxLength="6"
                             value={formData.corrPinCode}
                             onChange={handleInputChange}
@@ -1887,18 +2634,18 @@ const RegisterPage = ({ onNavigate }) => {
 
               {/* STEP 3: COMPANY, BRANCH & PASSWORD CREDENTIALS */}
               {currentStep === 3 && (
-                <div className="space-y-6 animate-in fade-in duration-200">
+                <div className="space-y-5 sm:space-y-6 animate-in fade-in duration-200">
                   <div className="border-b border-slate-100 pb-3">
-                    <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                      <Building className="w-4 h-4 text-[#003E9E]" />
+                    <h3 className="text-xs sm:text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                      <Building className="w-4 h-4 text-[#003E9E] shrink-0" />
                       <span>Company Association &amp; Membership Fee</span>
                     </h3>
-                    <p className="text-xs text-slate-500 mt-0.5">
+                    <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5">
                       Select your operational branch, statutory membership classification, and optional associate referral.
                     </p>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 text-xs">
                     <div>
                       <div className="flex items-center justify-between mb-1">
                         <label className="font-bold text-slate-700">EMP ID *</label>
@@ -1988,15 +2735,52 @@ const RegisterPage = ({ onNavigate }) => {
                     </div>
                   </div>
 
+                  {/* Portal Security Password */}
+                  <div className="p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-blue-50/60 border border-blue-200 space-y-2.5">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                      <span className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                        <Lock className="w-3.5 h-3.5 text-[#003E9E] shrink-0" />
+                        <span>Member Portal Login Password</span>
+                      </span>
+                      <span className="text-[10px] font-semibold text-[#003E9E] bg-blue-100 px-2 py-0.5 rounded self-start sm:self-auto">
+                        Default: member123
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                      <div>
+                        <label className="block font-bold text-slate-700 mb-1">Set Password</label>
+                        <input
+                          type="password"
+                          name="password"
+                          value={formData.password}
+                          onChange={handleInputChange}
+                          placeholder="Leave blank for default (member123)"
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-xs focus:ring-2 focus:ring-[#003E9E] focus:border-[#003E9E]"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-bold text-slate-700 mb-1">Confirm Password</label>
+                        <input
+                          type="password"
+                          name="confirmPassword"
+                          value={formData.confirmPassword}
+                          onChange={handleInputChange}
+                          placeholder="Re-enter password"
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-xs focus:ring-2 focus:ring-[#003E9E] focus:border-[#003E9E]"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Statutory Fee Notice Box */}
-                  <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-between">
+                  <div className="p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-amber-50 border border-amber-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4">
                     <div>
                       <span className="text-xs font-bold text-amber-950 block">Statutory Associate Membership Fee</span>
-                      <p className="text-[11px] text-amber-800 mt-0.5">
+                      <p className="text-[11px] text-amber-800 mt-0.5 leading-relaxed">
                         As per Nidhi Company rules 2013 &amp; 2014, Rs. 200 associate membership fee is applicable upon acceptance.
                       </p>
                     </div>
-                    <span className="text-xl font-black text-amber-950 font-mono">₹ 200.00</span>
+                    <span className="text-lg sm:text-xl font-black text-amber-950 font-mono shrink-0">₹ 200.00</span>
                   </div>
                 </div>
               )}
@@ -2005,16 +2789,16 @@ const RegisterPage = ({ onNavigate }) => {
               {currentStep === 4 && (
                 <div className="space-y-5 animate-in fade-in duration-200">
                   <div className="border-b border-slate-100 pb-3">
-                    <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                      <Users className="w-4 h-4 text-[#003E9E]" />
+                    <h3 className="text-xs sm:text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                      <Users className="w-4 h-4 text-[#003E9E] shrink-0" />
                       <span>Nominee / Beneficiary Details</span>
                     </h3>
-                    <p className="text-xs text-slate-500 mt-0.5">
+                    <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5">
                       Nominee will be legally entitled to deposit settlement and shares according to Section 72 of the Companies Act.
                     </p>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 text-xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 text-xs">
                     <div>
                       <label className="block font-bold text-slate-700 mb-1">Nominee Title *</label>
                       <select
@@ -2075,7 +2859,7 @@ const RegisterPage = ({ onNavigate }) => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 text-xs">
                     <div>
                       <label className="block font-bold text-slate-700 mb-1">Nominee Date of Birth</label>
                       <input
@@ -2083,7 +2867,7 @@ const RegisterPage = ({ onNavigate }) => {
                         name="nomineeDob"
                         value={formData.nomineeDob}
                         onChange={handleInputChange}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs"
+                        className="w-full px-2.5 sm:px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs"
                       />
                     </div>
 
@@ -2098,7 +2882,7 @@ const RegisterPage = ({ onNavigate }) => {
                       />
                     </div>
 
-                    <div>
+                    <div className="col-span-2 sm:col-span-1">
                       <label className="block font-bold text-slate-700 mb-1">Nominee Mobile Number</label>
                       <input
                         type="tel"
@@ -2111,7 +2895,7 @@ const RegisterPage = ({ onNavigate }) => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-xs">
                     <div>
                       <label className="block font-bold text-slate-700 mb-1">Nominee Address</label>
                       <input
@@ -2141,25 +2925,25 @@ const RegisterPage = ({ onNavigate }) => {
 
               {/* STEP 5: SHARE HOLDER & DEPOSIT DETAILS */}
               {currentStep === 5 && (
-                <div className="space-y-6 animate-in fade-in duration-200">
+                <div className="space-y-5 sm:space-y-6 animate-in fade-in duration-200">
                   <div className="border-b border-slate-100 pb-3">
-                    <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                      <CreditCard className="w-4 h-4 text-[#003E9E]" />
+                    <h3 className="text-xs sm:text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                      <CreditCard className="w-4 h-4 text-[#003E9E] shrink-0" />
                       <span>Share Holder &amp; Status of the Depositor</span>
                     </h3>
-                    <p className="text-xs text-slate-500 mt-0.5">
+                    <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5">
                       Statutory depositor and share allotment preferences as specified on the statutory form.
                     </p>
                   </div>
 
                   {/* ₹200 Membership Charge Statutory Notice */}
-                  <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-50 via-indigo-50/50 to-blue-50 border border-blue-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs shadow-2xs">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-[#003E9E] text-white flex items-center justify-center font-bold text-base shadow-xs flex-shrink-0">
+                  <div className="p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-r from-blue-50 via-indigo-50/50 to-blue-50 border border-blue-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs shadow-2xs">
+                    <div className="flex items-start sm:items-center gap-3">
+                      <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#003E9E] text-white flex items-center justify-center font-bold text-sm sm:text-base shadow-xs shrink-0 mt-0.5 sm:mt-0">
                         ₹
                       </div>
                       <div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                           <span className="font-bold text-slate-900 text-xs">
                             ₹ 200.00 Statutory Membership Admission Charge
                           </span>
@@ -2167,7 +2951,7 @@ const RegisterPage = ({ onNavigate }) => {
                             Statutory Fee
                           </span>
                         </div>
-                        <span className="text-[11px] text-slate-600 block mt-0.5">
+                        <span className="text-[11px] text-slate-600 block mt-0.5 leading-relaxed">
                           Mandatory non-refundable membership admission fee per Nidhi Companies Rules, 2014. Payable in Slide 9 via UPI QR, Razorpay, Card, Net Banking, or Branch Cash.
                         </span>
                       </div>
@@ -2175,7 +2959,7 @@ const RegisterPage = ({ onNavigate }) => {
                     <button
                       type="button"
                       onClick={() => handleJumpToStep(9)}
-                      className="px-3.5 py-2 rounded-xl bg-[#003E9E] hover:bg-[#002E78] text-white text-[11px] font-bold transition-all shadow-xs flex items-center gap-1.5 flex-shrink-0 cursor-pointer"
+                      className="w-full sm:w-auto px-3.5 py-2 rounded-xl bg-[#003E9E] hover:bg-[#002E78] text-white text-[11px] font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
                     >
                       <span>Jump to Slide 9 Payment</span>
                       <ArrowRight className="w-3.5 h-3.5" />
@@ -2183,11 +2967,11 @@ const RegisterPage = ({ onNavigate }) => {
                   </div>
 
                   {/* Repayment Preference Options */}
-                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+                  <div className="p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
                     <span className="text-xs font-bold text-slate-900 uppercase tracking-wider block">
                       Repayment of Deposit to be made payment to: *
                     </span>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3 text-xs">
                       {[
                         'First depositor',
                         'Either or Survivor',
@@ -2211,14 +2995,14 @@ const RegisterPage = ({ onNavigate }) => {
                             onChange={handleInputChange}
                             className="text-[#003E9E] focus:ring-[#003E9E]"
                           />
-                          <span>{mode}</span>
+                          <span className="text-xs">{mode}</span>
                         </label>
                       ))}
                     </div>
                   </div>
 
                   {/* Share Purchase & Allotment Box */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 text-xs">
                     <div>
                       <label className="block font-bold text-slate-700 mb-1">Share Purchase Quantity</label>
                       <input
@@ -2256,13 +3040,13 @@ const RegisterPage = ({ onNavigate }) => {
                   </div>
 
                   {/* 15G/15H Checkbox */}
-                  <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-700">
+                  <label className="flex items-start sm:items-center gap-2 cursor-pointer text-xs text-slate-700 leading-snug">
                     <input
                       type="checkbox"
                       name="form15g"
                       checked={formData.form15g}
                       onChange={handleInputChange}
-                      className="w-4 h-4 rounded border-slate-300 text-[#003E9E] focus:ring-[#003E9E]"
+                      className="w-4 h-4 mt-0.5 sm:mt-0 rounded border-slate-300 text-[#003E9E] focus:ring-[#003E9E] shrink-0"
                     />
                     <span>Applicable Tax not to be deducted — Form 15G / 15H Enclosed</span>
                   </label>
@@ -2271,30 +3055,30 @@ const RegisterPage = ({ onNavigate }) => {
 
               {/* STEP 6: IDENTITY & DOCUMENTS UPLOAD */}
               {currentStep === 6 && (
-                <div className="space-y-6 animate-in fade-in duration-200">
+                <div className="space-y-5 sm:space-y-6 animate-in fade-in duration-200">
                   <div className="border-b border-slate-100 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <div>
-                      <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                        <FileBadge className="w-4 h-4 text-[#003E9E]" />
+                      <h3 className="text-xs sm:text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                        <FileBadge className="w-4 h-4 text-[#003E9E] shrink-0" />
                         <span>Statutory Identification Documents &amp; Upload Status</span>
                       </h3>
-                      <p className="text-xs text-slate-500 mt-0.5">
+                      <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5">
                         Upload supporting KYC documents listed in the official statutory application form.
                       </p>
                     </div>
                     <button
                       type="button"
                       onClick={handleAutoAttachSampleDocs}
-                      className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold flex items-center gap-1.5 self-start sm:self-auto transition-colors shadow-2xs"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold self-start sm:self-auto transition-colors shadow-2xs"
                       title="Attach sample verified KYC documents for fast testing or demonstration"
                     >
-                      <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                      <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                       <span>⚡ Auto-attach Sample Docs</span>
                     </button>
                   </div>
 
                   {/* Primary ID Selector */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs p-4 rounded-2xl bg-slate-50 border border-slate-200">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-xs p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-slate-50 border border-slate-200">
                     <div>
                       <label className="block font-bold text-slate-800 mb-1">Primary Government ID Proof *</label>
                       <select
@@ -2326,8 +3110,8 @@ const RegisterPage = ({ onNavigate }) => {
                   </div>
 
                   {/* 5 Statutory Attachments List */}
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
+                  <div className="space-y-2.5 sm:space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                       <span className="text-xs font-bold text-slate-900 uppercase tracking-wider block">
                         Mandatory Attachments Checklist (As per Application Form Page 1)
                       </span>
@@ -2339,17 +3123,17 @@ const RegisterPage = ({ onNavigate }) => {
                     {formData.documents.map((doc, idx) => (
                       <div
                         key={doc.type}
-                        className="p-3.5 rounded-2xl border border-slate-200 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs hover:border-slate-300 transition-all"
+                        className="p-3 sm:p-3.5 rounded-xl sm:rounded-2xl border border-slate-200 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 shadow-2xs hover:border-slate-300 transition-all"
                       >
-                        <div className="flex items-center gap-3">
-                          <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs flex-shrink-0 ${
+                        <div className="flex items-start sm:items-center gap-2.5 sm:gap-3 min-w-0">
+                          <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl flex items-center justify-center font-bold text-xs shrink-0 mt-0.5 sm:mt-0 ${
                             doc.status === 'Uploaded' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-700'
                           }`}>
                             {doc.status === 'Uploaded' ? '✓' : idx + 1}
                           </div>
-                          <div>
-                            <strong className="text-xs text-slate-900 block">{doc.type}</strong>
-                            <div className="flex items-center gap-2 mt-0.5">
+                          <div className="min-w-0 flex-1">
+                            <strong className="text-xs text-slate-900 block leading-tight">{doc.type}</strong>
+                            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-1">
                               <span
                                 className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${
                                   doc.status === 'Uploaded'
@@ -2360,7 +3144,7 @@ const RegisterPage = ({ onNavigate }) => {
                                 {doc.status === 'Uploaded' ? '✓ Uploaded' : '○ Pending'}
                               </span>
                               {doc.fileName && (
-                                <span className="text-[10px] text-slate-500 font-mono truncate max-w-xs">
+                                <span className="text-[10px] text-slate-500 font-mono truncate max-w-[180px] sm:max-w-xs">
                                   {doc.fileName}
                                 </span>
                               )}
@@ -2368,8 +3152,8 @@ const RegisterPage = ({ onNavigate }) => {
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2 self-end sm:self-auto">
-                          <label className="cursor-pointer px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-2xs">
+                        <div className="flex items-center justify-end sm:justify-start gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 shrink-0">
+                          <label className="cursor-pointer px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 shadow-2xs">
                             <Upload className="w-3.5 h-3.5 text-slate-500" />
                             <span>{doc.status === 'Uploaded' ? 'Replace' : 'Upload File'}</span>
                             <input
@@ -2385,6 +3169,7 @@ const RegisterPage = ({ onNavigate }) => {
                               onClick={() => handleRemoveDocument(idx)}
                               className="p-1.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
                               title="Remove uploaded document"
+                              aria-label="Remove document"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
@@ -2400,29 +3185,29 @@ const RegisterPage = ({ onNavigate }) => {
               {currentStep === 7 && (
                 <div className="space-y-5 animate-in fade-in duration-200">
                   <div className="border-b border-slate-100 pb-3">
-                    <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                      <Users className="w-4 h-4 text-[#003E9E]" />
+                    <h3 className="text-xs sm:text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                      <Users className="w-4 h-4 text-[#003E9E] shrink-0" />
                       <span>Details of Witness / Proof</span>
                     </h3>
-                    <p className="text-xs text-slate-500 mt-0.5">
+                    <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5">
                       Statutory witness verification required for associate membership.
                     </p>
                   </div>
 
-                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
-                    <label className="flex items-center gap-2.5 cursor-pointer text-xs font-bold text-slate-900">
+                  <div className="p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-slate-50 border border-slate-200">
+                    <label className="flex items-start sm:items-center gap-2.5 cursor-pointer text-xs font-bold text-slate-900 leading-snug">
                       <input
                         type="checkbox"
                         name="witnessIsMember"
                         checked={formData.witnessIsMember}
                         onChange={handleInputChange}
-                        className="w-4 h-4 rounded border-slate-300 text-[#003E9E] focus:ring-[#003E9E]"
+                        className="w-4 h-4 mt-0.5 sm:mt-0 rounded border-slate-300 text-[#003E9E] focus:ring-[#003E9E] shrink-0"
                       />
                       <span>If witness is a member of Newutkal Finance Ltd., check here</span>
                     </label>
 
                     {formData.witnessIsMember && (
-                      <div className="mt-3 pt-3 border-t border-slate-200 max-w-xs">
+                      <div className="mt-3 pt-3 border-t border-slate-200 max-w-sm">
                         <label className="block font-bold text-slate-700 text-xs mb-1">
                           Witness Membership Number *
                         </label>
@@ -2438,7 +3223,7 @@ const RegisterPage = ({ onNavigate }) => {
                     )}
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-xs">
                     <div>
                       <label className="block font-bold text-slate-700 mb-1">Witness Full Name *</label>
                       <input
@@ -2466,7 +3251,7 @@ const RegisterPage = ({ onNavigate }) => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 text-xs">
                     <div className="sm:col-span-2">
                       <label className="block font-bold text-slate-700 mb-1">Witness Correspondence Address</label>
                       <input
@@ -2497,14 +3282,14 @@ const RegisterPage = ({ onNavigate }) => {
               {currentStep === 8 && (
                 <div className="space-y-5 animate-in fade-in duration-200">
                   <div className="border-b border-slate-100 pb-3">
-                    <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                      <ShieldCheck className="w-4 h-4 text-[#003E9E]" />
+                    <h3 className="text-xs sm:text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                      <ShieldCheck className="w-4 h-4 text-[#003E9E] shrink-0" />
                       <span>Statutory Declaration &amp; Membership Terms (Verbatim from Form Page 2)</span>
                     </h3>
                   </div>
 
                   {/* Statutory Terms Box */}
-                  <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 max-h-72 overflow-y-auto space-y-4 text-xs text-slate-700 leading-relaxed font-sans">
+                  <div className="p-3.5 sm:p-5 rounded-xl sm:rounded-2xl bg-slate-50 border border-slate-200 max-h-60 sm:max-h-72 overflow-y-auto space-y-3.5 sm:space-y-4 text-xs text-slate-700 leading-relaxed font-sans">
                     <div>
                       <h4 className="font-bold text-slate-900 mb-2 uppercase text-[11px] text-[#003E9E]">
                         Terms &amp; Conditions For Membership:
@@ -2535,15 +3320,15 @@ const RegisterPage = ({ onNavigate }) => {
                   </div>
 
                   {/* Mandatory Checkbox */}
-                  <div className="pt-2">
-                    <label className="flex items-start gap-3 p-4 rounded-2xl bg-blue-50/60 border border-blue-200 cursor-pointer text-xs font-bold text-finance-950 shadow-2xs">
+                  <div className="pt-1">
+                    <label className="flex items-start gap-3 p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-blue-50/60 border border-blue-200 cursor-pointer text-xs font-bold text-finance-950 shadow-2xs leading-relaxed">
                       <input
                         type="checkbox"
                         required
                         name="agreedTerms"
                         checked={formData.agreedTerms}
                         onChange={handleInputChange}
-                        className="w-5 h-5 mt-0.5 rounded border-blue-300 text-[#003E9E] focus:ring-[#003E9E]"
+                        className="w-5 h-5 mt-0.5 rounded border-blue-300 text-[#003E9E] focus:ring-[#003E9E] shrink-0"
                       />
                       <span>
                         I solemnly declare that all information provided by me in this application form is true and correct to the best of my knowledge. I declare that I am not a member of any other company similar in nature to Newutkal Finance Ltd., and I accept all Terms &amp; Conditions of Newutkal Finance Ltd.
@@ -2567,82 +3352,80 @@ const RegisterPage = ({ onNavigate }) => {
                   </div>
 
                   {/* Review Summary Grid */}
-                  <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-4 text-xs">
+                  <div className="p-3.5 sm:p-5 rounded-xl sm:rounded-2xl bg-slate-50 border border-slate-200 space-y-3 sm:space-y-4 text-xs">
                     <div className="flex justify-between items-center border-b border-slate-200 pb-2">
-                      <span className="font-bold uppercase text-[#003E9E] text-[11px]">Application Dossier Summary</span>
+                      <span className="font-bold uppercase text-[#003E9E] text-[10px] sm:text-[11px] tracking-wider">Application Dossier Summary</span>
                       <button
                         type="button"
                         onClick={() => setCurrentStep(1)}
-                        className="text-finance-600 font-bold hover:underline"
+                        className="text-finance-600 font-bold hover:underline text-[11px] cursor-pointer"
                       >
                         Edit Details
                       </button>
                     </div>
 
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-[11px]">
-                      <div>
-                        <span className="text-slate-500 block">Full Legal Name:</span>
-                        <strong className="text-slate-900">{formData.title} {formData.firstName} {formData.lastName}</strong>
+                    <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-3 text-[11px]">
+                      <div className="min-w-0">
+                        <span className="text-slate-500 block text-[10.5px]">Full Legal Name:</span>
+                        <strong className="text-slate-900 break-words block">{formData.title} {formData.firstName} {formData.lastName}</strong>
                       </div>
-                      <div>
-                        <span className="text-slate-500 block">Date of Birth &amp; Age:</span>
-                        <strong className="text-slate-900">{formData.dob} ({formData.age} yrs)</strong>
+                      <div className="min-w-0">
+                        <span className="text-slate-500 block text-[10.5px]">Date of Birth &amp; Age:</span>
+                        <strong className="text-slate-900 break-words block">{formData.dob} ({formData.age} yrs)</strong>
                       </div>
-                      <div>
-                        <span className="text-slate-500 block">Login Mobile No:</span>
-                        <strong className="text-slate-900 font-mono">{formData.mobileNumber}</strong>
+                      <div className="min-w-0">
+                        <span className="text-slate-500 block text-[10.5px]">Login Mobile No:</span>
+                        <strong className="text-slate-900 font-mono break-all block">{formData.mobileNumber}</strong>
                       </div>
-                      <div>
-                        <span className="text-slate-500 block">Login Email ID:</span>
-                        <strong className="text-slate-900">{formData.email}</strong>
+                      <div className="min-w-0">
+                        <span className="text-slate-500 block text-[10.5px]">Login Email ID:</span>
+                        <strong className="text-slate-900 break-all block">{formData.email}</strong>
                       </div>
-                      <div>
-                        <span className="text-slate-500 block">PAN Number:</span>
-                        <strong className="text-slate-900 font-mono">{formData.panNo}</strong>
+                      <div className="min-w-0">
+                        <span className="text-slate-500 block text-[10.5px]">PAN Number:</span>
+                        <strong className="text-slate-900 font-mono break-all block">{formData.panNo}</strong>
                       </div>
-                      <div>
-                        <span className="text-slate-500 block">Branch Assigned:</span>
-                        <strong className="text-slate-900">{branches?.find(b => b.id === formData.branchId)?.name || 'Bhubaneswar HQ'}</strong>
+                      <div className="min-w-0">
+                        <span className="text-slate-500 block text-[10.5px]">Branch Assigned:</span>
+                        <strong className="text-slate-900 break-words block">{branches?.find(b => b.id === formData.branchId)?.name || 'Bhubaneswar HQ'}</strong>
                       </div>
-                      <div>
-                        <span className="text-slate-500 block">EMP ID:</span>
-                        <strong className="text-slate-900 font-mono">{formData.empId || 'N/A'}</strong>
+                      <div className="min-w-0">
+                        <span className="text-slate-500 block text-[10.5px]">EMP ID:</span>
+                        <strong className="text-slate-900 font-mono break-all block">{formData.empId || 'N/A'}</strong>
                       </div>
-                      <div>
-                        <span className="text-slate-500 block">Membership ID:</span>
-                        <strong className="text-finance-700 font-mono font-bold">{formData.membershipId || 'Auto Assigned'}</strong>
+                      <div className="min-w-0">
+                        <span className="text-slate-500 block text-[10.5px]">Membership ID:</span>
+                        <strong className="text-finance-700 font-mono font-bold break-all block">{formData.membershipId || 'Auto Assigned'}</strong>
                       </div>
-                      <div>
-                        <span className="text-slate-500 block">Nominee:</span>
-                        <strong className="text-slate-900">{formData.nomineeFirstName} ({formData.nomineeRelationship})</strong>
+                      <div className="min-w-0">
+                        <span className="text-slate-500 block text-[10.5px]">Nominee:</span>
+                        <strong className="text-slate-900 break-words block">{formData.nomineeFirstName} ({formData.nomineeRelationship})</strong>
                       </div>
-                      <div>
-                        <span className="text-slate-500 block">Associate Fee:</span>
-                        <strong className="text-emerald-700 font-bold">₹ 200 (10 Shares)</strong>
+                      <div className="min-w-0">
+                        <span className="text-slate-500 block text-[10.5px]">Associate Fee:</span>
+                        <strong className="text-emerald-700 font-bold block">₹ 200 (10 Shares)</strong>
                       </div>
                     </div>
                   </div>
 
                   {/* Customer Signature Box */}
-                  <div className="p-5 rounded-2xl bg-white border-2 border-blue-200 space-y-3 shadow-2xs">
-                    <div className="flex items-center justify-between">
+                  <div className="p-3.5 sm:p-5 rounded-xl sm:rounded-2xl bg-white border-2 border-blue-200 space-y-3 shadow-2xs">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
                       <span className="text-xs font-bold text-[#001B47] uppercase tracking-wider flex items-center gap-1.5">
-                        <PenTool className="w-3.5 h-3.5 text-[#003E9E]" />
+                        <PenTool className="w-3.5 h-3.5 text-[#003E9E] shrink-0" />
                         <span>Customer Signature / Thumb Impression *</span>
                       </span>
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={clearSignature}
-                          className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-semibold flex items-center gap-1"
-                        >
-                          <RotateCcw className="w-3 h-3" /> Clear
-                        </button>
-                      </div>
+                      <button
+                        type="button"
+                        onClick={clearSignature}
+                        className="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-semibold flex items-center gap-1 shrink-0 cursor-pointer"
+                      >
+                        <RotateCcw className="w-3 h-3" /> Clear
+                      </button>
                     </div>
 
                     {/* Signature Canvas */}
-                    <div className="border border-dashed border-blue-300 rounded-xl bg-slate-50 p-2 flex flex-col items-center">
+                    <div className="border border-dashed border-blue-300 rounded-xl bg-slate-50 p-2 sm:p-3 flex flex-col items-center w-full">
                       <canvas
                         ref={canvasRef}
                         width={460}
@@ -2654,52 +3437,53 @@ const RegisterPage = ({ onNavigate }) => {
                         onTouchStart={startDrawing}
                         onTouchMove={draw}
                         onTouchEnd={stopDrawing}
+                        style={{ touchAction: 'none' }}
                         className="bg-white rounded-lg border border-slate-200 cursor-crosshair touch-none shadow-2xs w-full max-w-md h-28"
                       />
-                      <span className="text-[10px] text-slate-400 mt-1 italic">
-                        {hasSignature ? '✓ Signature recorded' : 'Sign above with mouse, finger, or stylus'}
+                      <span className="text-[10px] text-slate-400 mt-1.5 text-center italic">
+                        {hasSignature ? '✓ Signature recorded' : 'Sign above with finger, stylus, or mouse'}
                       </span>
                     </div>
 
-                    <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-[11px] text-slate-500 pt-1">
                       <span>Date: <strong>{formData.signatureDate}</strong></span>
-                      <span className="text-amber-800 font-medium">
+                      <span className="text-amber-800 font-medium text-[10.5px]">
                         * Office Authorization Stamp will be applied by authorized officer
                       </span>
                     </div>
                   </div>
 
                   {/* Statutory Joining Fee & Multi-Option Payment Gateway Box (₹200) */}
-                  <div className="p-5 sm:p-6 rounded-2xl bg-white border-2 border-finance-600/70 shadow-sm space-y-4">
+                  <div className="p-3.5 sm:p-6 rounded-xl sm:rounded-2xl bg-white border-2 border-finance-600/70 shadow-sm space-y-4">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="p-1.5 rounded-lg bg-finance-600 text-white">
+                          <span className="p-1.5 rounded-lg bg-finance-600 text-white shrink-0">
                             <CreditCard className="w-4 h-4" />
                           </span>
-                          <span className="text-sm font-bold text-slate-900">
+                          <span className="text-xs sm:text-sm font-bold text-slate-900">
                             Statutory Associate Membership Joining Fee
                           </span>
                         </div>
                         <p className="text-[11px] text-slate-500 mt-0.5">
-                          Select your payment method below to submit the mandatory ₹200 fee request for Admin verification.
+                          Select your payment method below for instant ₹200 fee clearance and immediate statutory membership activation.
                         </p>
                       </div>
-                      <div className="text-right flex sm:flex-col items-baseline sm:items-end justify-between gap-1">
+                      <div className="flex sm:flex-col items-center sm:items-end justify-between gap-1 pt-1 sm:pt-0">
                         <span className="text-[10px] uppercase font-bold text-slate-400">Payable Fee</span>
-                        <span className="text-2xl font-black text-finance-600 font-mono">₹ 200.00</span>
+                        <span className="text-xl sm:text-2xl font-black text-finance-600 font-mono">₹ 200.00</span>
                       </div>
                     </div>
 
                     {/* Payment Mode Tabs */}
-                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
                       {[
                         { id: 'UPI', label: 'UPI / QR Code', icon: QrCode, badge: 'Popular' },
                         { id: 'RAZORPAY', label: 'Razorpay', icon: Sparkles, badge: 'Gateway' },
                         { id: 'CARD', label: 'Card Banking', icon: CreditCard, badge: 'Debit/Credit' },
                         { id: 'NETBANKING', label: 'Net Banking', icon: Landmark, badge: 'All Banks' },
                         { id: 'CASH', label: 'Branch Cash', icon: Building, badge: 'Counter' },
-                      ].map((tab) => {
+                      ].map((tab, idx) => {
                         const Icon = tab.icon;
                         const isSelected = paymentMethod === tab.id;
                         return (
@@ -2707,7 +3491,9 @@ const RegisterPage = ({ onNavigate }) => {
                             key={tab.id}
                             type="button"
                             onClick={() => setPaymentMethod(tab.id)}
-                            className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between gap-1 ${
+                            className={`p-2.5 sm:p-3 rounded-xl border text-left transition-all flex flex-col justify-between gap-1 min-h-[66px] cursor-pointer ${
+                              idx === 4 ? 'col-span-2 sm:col-span-1' : ''
+                            } ${
                               isSelected
                                 ? 'border-finance-600 bg-finance-50/50 shadow-xs ring-2 ring-finance-600/30'
                                 : 'border-slate-200 hover:border-slate-300 bg-slate-50/50 hover:bg-slate-50'
@@ -2722,7 +3508,7 @@ const RegisterPage = ({ onNavigate }) => {
                               </span>
                             </div>
                             <div>
-                              <span className={`text-xs font-bold block ${isSelected ? 'text-finance-900' : 'text-slate-700'}`}>
+                              <span className={`text-xs font-bold block leading-tight ${isSelected ? 'text-finance-900' : 'text-slate-700'}`}>
                                 {tab.label}
                               </span>
                             </div>
@@ -2733,10 +3519,10 @@ const RegisterPage = ({ onNavigate }) => {
 
                     {/* TAB CONTENT: 1. UPI */}
                     {paymentMethod === 'UPI' && (
-                      <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
-                        <div className="flex flex-col sm:flex-row items-center gap-4">
+                      <div className="p-3 sm:p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+                        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
                           {/* QR Code Container */}
-                          <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-2xs flex flex-col items-center flex-shrink-0">
+                          <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-2xs flex flex-col items-center shrink-0 w-36">
                             <div className="w-28 h-28 bg-gradient-to-br from-slate-900 via-finance-950 to-slate-900 rounded-lg p-2 flex flex-col items-center justify-between relative shadow-inner">
                               <div className="w-full flex justify-between">
                                 <div className="w-6 h-6 border-2 border-white rounded-xs p-0.5"><div className="w-full h-full bg-white"></div></div>
@@ -2750,14 +3536,14 @@ const RegisterPage = ({ onNavigate }) => {
                                 <div className="w-3 h-3 bg-amber-400 rounded-xs self-end"></div>
                               </div>
                             </div>
-                            <span className="text-[10px] font-bold text-slate-600 mt-1.5">Scan to Pay ₹200</span>
+                            <span className="text-[10px] font-bold text-slate-600 mt-1.5 text-center">Scan to Pay ₹200</span>
                           </div>
 
-                          <div className="flex-1 space-y-2 text-xs w-full">
+                          <div className="flex-1 space-y-2.5 text-xs w-full">
                             <div>
                               <span className="text-slate-500 block text-[11px]">Official Utkal Finance VPA / UPI ID:</span>
-                              <div className="flex items-center gap-2 mt-0.5">
-                                <span className="font-mono font-bold text-slate-900 bg-white px-2.5 py-1.5 rounded-lg border border-slate-200">
+                              <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 mt-1">
+                                <span className="font-mono font-bold text-slate-900 bg-white px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs break-all">
                                   newutkalfinance@sbi
                                 </span>
                                 <button
@@ -2767,7 +3553,7 @@ const RegisterPage = ({ onNavigate }) => {
                                     setCopiedUpi(true);
                                     setTimeout(() => setCopiedUpi(false), 2000);
                                   }}
-                                  className="px-2.5 py-1.5 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 text-[11px] font-semibold flex items-center gap-1"
+                                  className="px-2.5 py-1.5 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 text-[11px] font-semibold flex items-center gap-1 shrink-0 cursor-pointer"
                                 >
                                   {copiedUpi ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
                                   <span>{copiedUpi ? 'Copied' : 'Copy'}</span>
@@ -2783,7 +3569,7 @@ const RegisterPage = ({ onNavigate }) => {
                                     key={app}
                                     type="button"
                                     onClick={() => setPaymentUpiApp(app)}
-                                    className={`px-2 py-1 rounded-md text-[10.5px] font-semibold border transition-all ${
+                                    className={`px-2 py-1 rounded-md text-[10.5px] font-semibold border transition-all cursor-pointer ${
                                       paymentUpiApp === app
                                         ? 'bg-white border-finance-600 text-finance-700 shadow-2xs'
                                         : 'bg-white/60 border-slate-200 text-slate-600 hover:bg-white'
@@ -2795,29 +3581,29 @@ const RegisterPage = ({ onNavigate }) => {
                               </div>
                             </div>
 
-                            <div className="pt-2">
-                              <label className="block text-slate-700 font-bold mb-1">
+                            <div className="pt-1.5">
+                              <label className="block text-slate-700 font-bold mb-1 text-xs">
                                 Enter 12-Digit UPI UTR / Transaction Reference ID *
                               </label>
-                              <div className="flex gap-2">
+                              <div className="flex flex-col sm:flex-row gap-2">
                                 <input
                                   type="text"
                                   value={paymentUtr}
                                   onChange={(e) => setPaymentUtr(e.target.value)}
                                   placeholder="e.g. 423189745120 or UPI Ref"
-                                  className="flex-1 px-3 py-2 rounded-xl border border-slate-200 bg-white font-mono text-xs focus:ring-2 focus:ring-finance-600 outline-none"
+                                  className="flex-1 px-3 py-2 rounded-xl border border-slate-200 bg-white font-mono text-xs focus:ring-2 focus:ring-finance-600 outline-none w-full"
                                 />
                                 <button
                                   type="button"
                                   onClick={() => setPaymentUtr(`UTR${Math.floor(100000000000 + Math.random() * 900000000000)}`)}
-                                  className="px-2.5 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-[10.5px] font-semibold flex items-center gap-1"
+                                  className="px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-[10.5px] font-semibold flex items-center justify-center gap-1 shrink-0 cursor-pointer"
                                   title="Auto-fill sample UTR for instant demo testing"
                                 >
                                   ⚡ Test UTR
                                 </button>
                               </div>
-                              <span className="text-[10px] text-slate-400 mt-1 block">
-                                Enter the UTR generated in your UPI app. Admin / Agent will verify this reference before activating your Member ID.
+                              <span className="text-[10px] text-slate-400 mt-1 block leading-tight">
+                                Enter the UTR generated in your UPI app. Your payment will be confirmed and Member ID activated immediately upon submission.
                               </span>
                             </div>
                           </div>
@@ -2827,10 +3613,10 @@ const RegisterPage = ({ onNavigate }) => {
 
                     {/* TAB CONTENT: 2. RAZORPAY */}
                     {paymentMethod === 'RAZORPAY' && (
-                      <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
-                        <div className="flex items-center justify-between">
+                      <div className="p-3.5 sm:p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                           <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-lg bg-[#003E9E] flex items-center justify-center text-white font-black text-xs">
+                            <div className="w-8 h-8 rounded-lg bg-[#003E9E] flex items-center justify-center text-white font-black text-xs shrink-0">
                               R
                             </div>
                             <div>
@@ -2839,30 +3625,30 @@ const RegisterPage = ({ onNavigate }) => {
                             </div>
                           </div>
                           {razorpayPaymentId ? (
-                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-full">
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-full shrink-0">
                               <CheckCircle2 className="w-3.5 h-3.5" /> Authorized
                             </span>
                           ) : (
-                            <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
+                            <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full shrink-0">
                               Payment Ready
                             </span>
                           )}
                         </div>
 
                         {razorpayPaymentId ? (
-                          <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 flex items-center justify-between text-xs">
+                          <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs">
                             <div>
                               <span className="text-[10px] text-emerald-800 font-bold block">Razorpay Payment ID:</span>
-                              <span className="font-mono font-bold text-emerald-950">{razorpayPaymentId}</span>
+                              <span className="font-mono font-bold text-emerald-950 break-all">{razorpayPaymentId}</span>
                             </div>
                             <span className="text-[11px] font-bold text-emerald-800">₹ 200.00 Authorized</span>
                           </div>
                         ) : (
-                          <div className="text-center py-3">
+                          <div className="text-center py-2 sm:py-3">
                             <button
                               type="button"
                               onClick={() => setRazorpayModalOpen(true)}
-                              className="px-6 py-2.5 rounded-xl bg-[#003E9E] hover:bg-[#002E78] text-white text-xs font-bold uppercase tracking-wider transition-all shadow-md inline-flex items-center gap-2"
+                              className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-[#003E9E] hover:bg-[#002E78] text-white text-xs font-bold uppercase tracking-wider transition-all shadow-md inline-flex items-center justify-center gap-2 cursor-pointer"
                             >
                               <Sparkles className="w-4 h-4 text-amber-300" />
                               <span>Pay ₹200 with Razorpay Gateway</span>
@@ -2877,11 +3663,11 @@ const RegisterPage = ({ onNavigate }) => {
 
                     {/* TAB CONTENT: 3. CARD BANKING */}
                     {paymentMethod === 'CARD' && (
-                      <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
-                        <div className="flex items-center justify-between">
+                      <div className="p-3.5 sm:p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                           <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                            <CreditCard className="w-3.5 h-3.5 text-finance-600" />
-                            Debit or Credit Card (RuPay / Visa / MasterCard)
+                            <CreditCard className="w-3.5 h-3.5 text-finance-600 shrink-0" />
+                            <span>Debit or Credit Card (RuPay / Visa / MasterCard)</span>
                           </span>
                           <button
                             type="button"
@@ -2891,7 +3677,7 @@ const RegisterPage = ({ onNavigate }) => {
                               expiry: '12/28',
                               cvv: '849'
                             })}
-                            className="px-2.5 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-[10.5px] font-semibold flex items-center gap-1"
+                            className="self-start sm:self-auto px-2.5 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-[10.5px] font-semibold flex items-center gap-1 cursor-pointer"
                           >
                             ⚡ Auto-fill Test Card
                           </button>
@@ -2952,9 +3738,9 @@ const RegisterPage = ({ onNavigate }) => {
 
                     {/* TAB CONTENT: 4. NET BANKING */}
                     {paymentMethod === 'NETBANKING' && (
-                      <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+                      <div className="p-3.5 sm:p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
                         <span className="text-xs font-bold text-slate-800 block">Select Your Bank:</span>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+                        <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
                           {[
                             'State Bank of India',
                             'HDFC Bank',
@@ -2967,7 +3753,7 @@ const RegisterPage = ({ onNavigate }) => {
                               key={bank}
                               type="button"
                               onClick={() => setSelectedBank(bank)}
-                              className={`p-2 rounded-xl border text-left font-semibold transition-all ${
+                              className={`p-2 sm:p-2.5 rounded-xl border text-left font-semibold transition-all cursor-pointer ${
                                 selectedBank === bank
                                   ? 'border-finance-600 bg-white text-finance-700 shadow-2xs ring-1 ring-finance-600'
                                   : 'border-slate-200 bg-white/70 text-slate-700 hover:bg-white'
@@ -2982,18 +3768,18 @@ const RegisterPage = ({ onNavigate }) => {
                           <label className="block font-semibold text-slate-700 mb-1">
                             Bank Reference / Transaction Ref (Optional)
                           </label>
-                          <div className="flex gap-2">
+                          <div className="flex flex-col sm:flex-row gap-2">
                             <input
                               type="text"
                               value={bankTxnRef}
                               onChange={(e) => setBankTxnRef(e.target.value)}
                               placeholder="e.g. INB98412048 or Account Ref"
-                              className="flex-1 px-3 py-2 rounded-xl border border-slate-200 bg-white font-mono text-xs focus:ring-2 focus:ring-finance-600 outline-none"
+                              className="flex-1 px-3 py-2 rounded-xl border border-slate-200 bg-white font-mono text-xs focus:ring-2 focus:ring-finance-600 outline-none w-full"
                             />
                             <button
                               type="button"
                               onClick={() => setBankTxnRef(`INB${Math.floor(10000000 + Math.random() * 90000000)}`)}
-                              className="px-2.5 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-[10.5px] font-semibold"
+                              className="px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-[10.5px] font-semibold cursor-pointer shrink-0"
                             >
                               ⚡ Test Ref
                             </button>
@@ -3004,10 +3790,10 @@ const RegisterPage = ({ onNavigate }) => {
 
                     {/* TAB CONTENT: 5. BRANCH COUNTER CASH */}
                     {paymentMethod === 'CASH' && (
-                      <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
-                        <div className="flex items-center justify-between">
+                      <div className="p-3.5 sm:p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                           <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center text-white">
+                            <div className="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center text-white shrink-0">
                               <Building className="w-4 h-4" />
                             </div>
                             <div>
@@ -3015,7 +3801,7 @@ const RegisterPage = ({ onNavigate }) => {
                               <span className="text-[10px] text-slate-500">Pay directly at any official Newutkal Finance branch counter</span>
                             </div>
                           </div>
-                          <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">
+                          <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full shrink-0">
                             ₹ 200 Statutory Fee
                           </span>
                         </div>
@@ -3028,57 +3814,57 @@ const RegisterPage = ({ onNavigate }) => {
                             <label className="block font-bold text-slate-700 mb-1">
                               Branch Cashier Receipt / Challan Reference Number *
                             </label>
-                            <div className="flex gap-2">
+                            <div className="flex flex-col sm:flex-row gap-2">
                               <input
                                 type="text"
                                 value={branchCashReceipt}
                                 onChange={(e) => setBranchCashReceipt(e.target.value)}
                                 placeholder="e.g. RCP-2026-89410 or Challan No."
-                                className="flex-1 px-3 py-2 rounded-xl border border-slate-200 bg-white font-mono text-xs focus:ring-2 focus:ring-finance-600 outline-none"
+                                className="flex-1 px-3 py-2 rounded-xl border border-slate-200 bg-white font-mono text-xs focus:ring-2 focus:ring-finance-600 outline-none w-full"
                               />
                               <button
                                 type="button"
                                 onClick={() => setBranchCashReceipt(`RCP-2026-${Math.floor(10000 + Math.random() * 90000)}`)}
-                                className="px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-[10.5px] font-semibold flex items-center gap-1"
+                                className="px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-[10.5px] font-semibold flex items-center justify-center gap-1 cursor-pointer shrink-0"
                                 title="Auto-fill sample receipt number for testing"
                               >
                                 ⚡ Test Receipt
                               </button>
                             </div>
-                            <span className="text-[10px] text-slate-400 mt-1 block">
-                              The branch administrator will cross-verify this cash receipt before approving and activating your Member ID.
+                            <span className="text-[10px] text-slate-400 mt-1 block leading-tight">
+                              Cash receipt reference will be recorded and Member ID activated immediately upon submission.
                             </span>
                           </div>
                         </div>
                       </div>
                     )}
 
-                    <div className="p-3 rounded-xl bg-blue-50/70 border border-blue-200 flex items-start gap-2 text-slate-600 text-[11px]">
-                      <ShieldCheck className="w-4 h-4 text-[#003E9E] flex-shrink-0 mt-0.5" />
+                    <div className="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200 flex items-start gap-2 text-slate-700 text-[11px] leading-relaxed">
+                      <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                       <span>
-                        <strong>Verification Policy:</strong> When you submit your application and ₹200 fee, a verification request is automatically dispatched to the Admin / Agent. Once the administrator verifies the payment and clicks <strong>"Payment Successful"</strong>, your official Member ID will be activated and portal access unlocked.
+                        <strong>Instant Statutory Activation Policy:</strong> Once you submit your application and ₹200 fee details, your official membership and Member ID are instantly activated with zero wait time. No administrator permission or manual acceptance queue is required to access your membership credentials and complete dossier.
                       </span>
                     </div>
 
                     {/* Step 9 Submission Readiness Banner */}
-                    <div className="p-4 rounded-2xl bg-emerald-50 border-2 border-emerald-300/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-2xs">
+                    <div className="p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-emerald-50 border-2 border-emerald-300/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-2xs">
                       <div className="flex items-center gap-2.5">
-                        <div className="w-7 h-7 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold flex-shrink-0">
+                        <div className="w-7 h-7 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold shrink-0">
                           ✓
                         </div>
                         <div>
                           <strong className="text-emerald-950 font-bold block">
-                            Application Dossier Ready for Submission
+                            Application Dossier Ready for Instant Activation
                           </strong>
-                          <span className="text-emerald-800 text-[11px]">
-                            ₹200 Statutory Joining Fee request will be recorded and sent to the Admin queue for immediate verification.
+                          <span className="text-emerald-800 text-[11px] block leading-tight">
+                            ₹200 Statutory Joining Fee recorded and membership will be activated instantly upon submission.
                           </span>
                         </div>
                       </div>
                       <button
                         type="button"
                         onClick={handleQuickFillDemo}
-                        className="px-3.5 py-1.5 rounded-xl bg-white border border-emerald-300 hover:bg-emerald-100 text-emerald-900 text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 flex-shrink-0 cursor-pointer"
+                        className="w-full sm:w-auto px-3.5 py-1.5 rounded-xl bg-white border border-emerald-300 hover:bg-emerald-100 text-emerald-900 text-xs font-bold transition-all shadow-2xs flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
                         title="Populate any empty fields with verified test data"
                       >
                         <Sparkles className="w-3.5 h-3.5 text-amber-500" />
@@ -3088,16 +3874,16 @@ const RegisterPage = ({ onNavigate }) => {
 
                     {/* Prominent Error Notice near Submit Button if any */}
                     {errorMsg && (
-                      <div className="p-4 rounded-2xl bg-rose-50 border-2 border-rose-300 text-rose-900 text-xs flex items-start gap-2.5 shadow-sm">
-                        <AlertCircle className="w-5 h-5 text-rose-600 flex-shrink-0 mt-0.5" />
-                        <div className="flex-1">
+                      <div className="p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-rose-50 border-2 border-rose-300 text-rose-900 text-xs flex items-start gap-2.5 shadow-sm">
+                        <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+                        <div className="flex-1 min-w-0">
                           <strong className="block font-bold">Submission Notice:</strong>
-                          <p className="mt-0.5">{errorMsg}</p>
+                          <p className="mt-0.5 break-words">{errorMsg}</p>
                           <div className="mt-2 flex items-center gap-2">
                             <button
                               type="button"
                               onClick={handleQuickFillDemo}
-                              className="px-3 py-1 rounded-lg bg-rose-600 text-white text-[11px] font-bold hover:bg-rose-700 cursor-pointer"
+                              className="px-3 py-1.5 rounded-lg bg-rose-600 text-white text-[11px] font-bold hover:bg-rose-700 cursor-pointer"
                             >
                               ⚡ Quick-Fill Unique Details &amp; Re-Submit
                             </button>
@@ -3110,26 +3896,26 @@ const RegisterPage = ({ onNavigate }) => {
               )}
 
               {/* Wizard Navigation Footer */}
-              <div className="pt-6 border-t border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+              <div className="pt-5 sm:pt-6 border-t border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
                 {currentStep > 1 ? (
                   <button
                     type="button"
                     onClick={handlePrevStep}
-                    className="px-5 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                    className="order-2 sm:order-1 px-5 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center justify-center gap-1.5 transition-colors cursor-pointer min-h-[44px]"
                   >
                     <ArrowLeft className="w-4 h-4" />
                     <span>Previous Step</span>
                   </button>
                 ) : (
-                  <div></div>
+                  <div className="order-2 sm:order-1 hidden sm:block"></div>
                 )}
 
                 {currentStep < 9 ? (
-                  <div className="flex items-center justify-end gap-2">
+                  <div className="order-1 sm:order-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2">
                     <button
                       type="button"
                       onClick={() => handleJumpToStep(9)}
-                      className="hidden sm:flex px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors items-center gap-1.5 cursor-pointer"
+                      className="hidden sm:flex px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors items-center justify-center gap-1.5 cursor-pointer min-h-[44px]"
                       title="Jump directly to Review & Submit slide"
                     >
                       <span>Slide 9 (Review &amp; Pay)</span>
@@ -3138,18 +3924,18 @@ const RegisterPage = ({ onNavigate }) => {
                     <button
                       type="button"
                       onClick={handleNextStep}
-                      className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#003E9E] to-[#0A3F9F] hover:from-[#002E78] hover:to-[#001B47] text-white text-xs font-bold uppercase tracking-wider transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 cursor-pointer"
+                      className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#003E9E] to-[#0A3F9F] hover:from-[#002E78] hover:to-[#001B47] text-white text-xs font-bold uppercase tracking-wider transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 cursor-pointer min-h-[44px]"
                     >
                       <span>Continue to Step {currentStep + 1}</span>
                       <ArrowRight className="w-4 h-4" />
                     </button>
                   </div>
                 ) : (
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2.5">
+                  <div className="order-1 sm:order-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2.5">
                     <button
                       type="button"
                       onClick={handleQuickFillDemo}
-                      className="px-4 py-3 rounded-xl border-2 border-dashed border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+                      className="w-full sm:w-auto px-4 py-3 rounded-xl border-2 border-dashed border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs min-h-[44px]"
                       title="1-Click fill demo data across all 9 slides"
                     >
                       <Sparkles className="w-4 h-4 text-amber-600" />
@@ -3159,7 +3945,7 @@ const RegisterPage = ({ onNavigate }) => {
                     <button
                       type="submit"
                       disabled={isSubmitting}
-                      className="px-8 py-3 rounded-xl bg-gradient-to-r from-finance-900 via-[#003E9E] to-finance-900 hover:from-finance-800 hover:to-[#002E78] text-white text-xs font-bold uppercase tracking-wider transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed"
+                      className="w-full sm:w-auto px-8 py-3 rounded-xl bg-gradient-to-r from-finance-900 via-[#003E9E] to-finance-900 hover:from-finance-800 hover:to-[#002E78] text-white text-xs font-bold uppercase tracking-wider transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed min-h-[44px]"
                     >
                       {isSubmitting ? (
                         <>
@@ -3184,7 +3970,7 @@ const RegisterPage = ({ onNavigate }) => {
       </main>
 
       {/* Footer */}
-      <footer className="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-500">
+      <footer className="bg-white border-t border-slate-200 py-4 px-3 text-center text-xs text-slate-500 leading-normal">
         &copy; {new Date().getFullYear()} Newutkal Finance Ltd. Certified by Govt. of India (Reg. No.: U64199OD2026PLC054968).
       </footer>
 
@@ -3197,51 +3983,65 @@ const RegisterPage = ({ onNavigate }) => {
         maxWidth="max-w-5xl"
       >
         <div className="space-y-4">
-          <div className="flex justify-end">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-2">
+            <span className="text-[11px] text-slate-500">
+              Official 2-page membership application document compliant with Statutory norms.
+            </span>
             <button
               onClick={() => window.print()}
-              className="px-4 py-2 rounded-xl bg-finance-900 text-white text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-xs"
+              className="self-end sm:self-auto px-4 py-2 rounded-xl bg-finance-900 text-white text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-xs shrink-0 cursor-pointer"
             >
               <Printer className="w-3.5 h-3.5 text-emerald-400" />
               <span>Print / Download PDF</span>
             </button>
           </div>
-          <OfficialMembershipForm
-            data={{
-              id: registeredApplication?.member?.id || formData.membershipId || registeredApplication?.applicationId || 'APP-PREVIEW',
-              membershipId: formData.membershipId,
-              empId: formData.empId,
-              name: `${formData.title} ${formData.firstName} ${formData.lastName}`.trim(),
-              fullName: `${formData.title} ${formData.firstName} ${formData.lastName}`.trim(),
-              fatherOrHusbandName: formData.fatherOrHusbandName,
-              dob: formData.dob,
-              age: formData.age,
-              gender: formData.gender,
-              maritalStatus: formData.maritalStatus,
-              education: formData.education,
-              religion: formData.religion,
-              category: formData.category,
-              occupation: formData.occupation,
-              email: formData.email,
-              phone: formData.mobileNumber,
-              panNo: formData.panNo,
-              address: formData.permAddress,
-              taluka: formData.permTaluka,
-              district: formData.permDistrict,
-              state: formData.permState,
-              pinCode: formData.permPinCode,
-              nomineeName: formData.nomineeFirstName,
-              nomineeLastName: formData.nomineeLastName,
-              nomineeRelationship: formData.nomineeRelationship,
-              nomineeAge: formData.nomineeAge,
-              witnessName: formData.witnessName,
-              witnessMembershipNo: formData.witnessMembershipNo,
-              witnessMobile: formData.witnessMobile,
-              witnessAddress: formData.witnessAddress,
-              signatureData: formData.signatureData
-            }}
-            isBlank={false}
-          />
+
+          {/* Swipe Hint for Mobile Viewports */}
+          <div className="sm:hidden flex items-center justify-between px-3 py-2 bg-blue-50/80 border border-blue-200 rounded-xl text-[11px] text-[#003E9E]">
+            <span>👈 Swipe sideways to review official 2-page form 👉</span>
+            <span className="font-bold text-[10px] bg-blue-100 px-1.5 py-0.5 rounded">A4 Sheet</span>
+          </div>
+
+          <div className="overflow-x-auto -mx-2 sm:mx-0 pb-2">
+            <div className="min-w-[650px] sm:min-w-0">
+              <OfficialMembershipForm
+                data={{
+                  id: registeredApplication?.member?.id || formData.membershipId || registeredApplication?.applicationId || 'APP-PREVIEW',
+                  membershipId: formData.membershipId,
+                  empId: formData.empId,
+                  name: `${formData.title} ${formData.firstName} ${formData.lastName}`.trim(),
+                  fullName: `${formData.title} ${formData.firstName} ${formData.lastName}`.trim(),
+                  fatherOrHusbandName: formData.fatherOrHusbandName,
+                  dob: formData.dob,
+                  age: formData.age,
+                  gender: formData.gender,
+                  maritalStatus: formData.maritalStatus,
+                  education: formData.education,
+                  religion: formData.religion,
+                  category: formData.category,
+                  occupation: formData.occupation,
+                  email: formData.email,
+                  phone: formData.mobileNumber,
+                  panNo: formData.panNo,
+                  address: formData.permAddress,
+                  taluka: formData.permTaluka,
+                  district: formData.permDistrict,
+                  state: formData.permState,
+                  pinCode: formData.permPinCode,
+                  nomineeName: formData.nomineeFirstName,
+                  nomineeLastName: formData.nomineeLastName,
+                  nomineeRelationship: formData.nomineeRelationship,
+                  nomineeAge: formData.nomineeAge,
+                  witnessName: formData.witnessName,
+                  witnessMembershipNo: formData.witnessMembershipNo,
+                  witnessMobile: formData.witnessMobile,
+                  witnessAddress: formData.witnessAddress,
+                  signatureData: formData.signatureData
+                }}
+                isBlank={false}
+              />
+            </div>
+          </div>
         </div>
       </Modal>
 
@@ -3254,15 +4054,15 @@ const RegisterPage = ({ onNavigate }) => {
         maxWidth="max-w-md"
       >
         <div className="space-y-4 text-xs">
-          <div className="p-4 rounded-2xl bg-gradient-to-br from-[#001B47] to-[#003E9E] text-white flex items-center justify-between shadow-md">
+          <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-br from-[#001B47] to-[#003E9E] text-white flex items-center justify-between shadow-md">
             <div>
               <span className="text-[10px] uppercase font-bold text-slate-300 block">Payable to</span>
-              <strong className="text-sm font-bold text-white block">New Utkal Finance Ltd.</strong>
+              <strong className="text-xs sm:text-sm font-bold text-white block">New Utkal Finance Ltd.</strong>
               <span className="text-[10px] text-slate-300 font-mono">Associate Joining Fee</span>
             </div>
             <div className="text-right">
               <span className="text-[10px] text-slate-300 block font-bold">TOTAL</span>
-              <span className="text-2xl font-black text-amber-300 font-mono">₹ 200.00</span>
+              <span className="text-xl sm:text-2xl font-black text-amber-300 font-mono">₹ 200.00</span>
             </div>
           </div>
 
@@ -3271,22 +4071,22 @@ const RegisterPage = ({ onNavigate }) => {
             <div className="space-y-2">
               <div className="p-3 rounded-xl border border-finance-600 bg-finance-50/60 flex items-center justify-between cursor-pointer">
                 <div className="flex items-center gap-2.5">
-                  <span className="w-7 h-7 rounded-lg bg-[#003E9E] text-white flex items-center justify-center font-bold text-xs">
+                  <span className="w-7 h-7 rounded-lg bg-[#003E9E] text-white flex items-center justify-center font-bold text-xs shrink-0">
                     ₹
                   </span>
                   <div>
-                    <span className="font-bold text-slate-900 block">UPI Instant (GPay / PhonePe / Paytm)</span>
+                    <span className="font-bold text-slate-900 block text-xs">UPI Instant (GPay / PhonePe / Paytm)</span>
                     <span className="text-[10px] text-slate-500">Fast zero-fee settlement</span>
                   </div>
                 </div>
-                <span className="text-finance-600 font-bold text-xs">Selected</span>
+                <span className="text-finance-600 font-bold text-xs shrink-0">Selected</span>
               </div>
 
               <div className="p-3 rounded-xl border border-slate-200 hover:bg-slate-50 flex items-center justify-between cursor-pointer">
                 <div className="flex items-center gap-2.5">
-                  <CreditCard className="w-5 h-5 text-slate-600" />
+                  <CreditCard className="w-5 h-5 text-slate-600 shrink-0" />
                   <div>
-                    <span className="font-bold text-slate-900 block">Cards (Debit / Credit)</span>
+                    <span className="font-bold text-slate-900 block text-xs">Cards (Debit / Credit)</span>
                     <span className="text-[10px] text-slate-500">Visa, MasterCard, RuPay</span>
                   </div>
                 </div>
@@ -3294,11 +4094,11 @@ const RegisterPage = ({ onNavigate }) => {
             </div>
           </div>
 
-          <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
+          <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
             <button
               type="button"
               onClick={() => setRazorpayModalOpen(false)}
-              className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+              className="order-2 sm:order-1 px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 text-center cursor-pointer"
             >
               Cancel
             </button>
@@ -3315,7 +4115,7 @@ const RegisterPage = ({ onNavigate }) => {
                   addToast(`Razorpay authorization successful! Ref: ${pid}`, 'success');
                 }, 800);
               }}
-              className="px-6 py-2.5 rounded-xl bg-[#003E9E] hover:bg-[#002E78] text-white text-xs font-bold uppercase tracking-wider shadow-md flex items-center gap-2"
+              className="order-1 sm:order-2 px-6 py-2.5 rounded-xl bg-[#003E9E] hover:bg-[#002E78] text-white text-xs font-bold uppercase tracking-wider shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75"
             >
               {razorpaySimulating ? (
                 <>
