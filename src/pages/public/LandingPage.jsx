@@ -1338,15 +1338,22 @@ const LandingPage = ({ onNavigate }) => {
                       />
                     </div>
                     <div>
-                      <label className="block font-bold text-slate-700 mb-1">Contact Number *</label>
-                      <input
-                        type="tel"
-                        required
-                        value={contactForm.phone}
-                        onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })}
-                        placeholder="e.g. +91 98610 00000"
-                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-finance-600"
-                      />
+                      <label className="block font-bold text-slate-700 mb-1">Contact Number * (10 Digits)</label>
+                      <div className="relative">
+                        <input
+                          type="tel"
+                          required
+                          maxLength={10}
+                          inputMode="numeric"
+                          value={contactForm.phone}
+                          onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
+                          placeholder="10-digit mobile (e.g. 9861054321)"
+                          className="w-full px-4 pr-12 py-2.5 rounded-xl border border-slate-200 bg-white text-sm font-mono font-bold focus:outline-none focus:ring-2 focus:ring-finance-600"
+                        />
+                        <span className={`absolute right-3 top-3 text-[10px] font-mono font-bold ${contactForm.phone?.length === 10 ? 'text-emerald-600' : 'text-slate-400'}`}>
+                          {contactForm.phone?.length || 0}/10
+                        </span>
+                      </div>
                     </div>
                   </div>
 

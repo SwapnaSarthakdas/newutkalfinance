@@ -243,15 +243,28 @@ const RegisterPage = ({ onNavigate }) => {
     }
   }, [currentStep]);
 
-  // Auto-calculate Age from DOB
+  // Auto-calculate Age from DOB with strict 18+ enforcement
   useEffect(() => {
     if (formData.dob) {
       try {
         const birthDate = new Date(formData.dob);
-        const diff = Date.now() - birthDate.getTime();
-        const computedAge = Math.floor(diff / (365.25 * 24 * 60 * 60 * 1000));
+        const today = new Date();
+        let computedAge = today.getFullYear() - birthDate.getFullYear();
+        const m = today.getMonth() - birthDate.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+          computedAge--;
+        }
         if (computedAge >= 0) {
           setFormData((prev) => ({ ...prev, age: String(computedAge) }));
+          if (computedAge < 18) {
+            setValidationErrors((prev) => ({
+              ...prev,
+              age: `Applicant must be at least 18 years of age (currently ${computedAge} yrs).`,
+              dob: `Underage: Applicant is ${computedAge} years old. Minimum age is 18.`
+            }));
+          } else {
+            setValidationErrors((prev) => ({ ...prev, age: null, dob: null }));
+          }
         }
       } catch (e) {
         // ignore
@@ -329,9 +342,35 @@ const RegisterPage = ({ onNavigate }) => {
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    const finalVal = (name === 'empId' || name === 'membershipId' || name === 'panNo') && typeof value === 'string'
-      ? value.toUpperCase()
-      : (type === 'checkbox' ? checked : value);
+    let finalVal = type === 'checkbox' ? checked : value;
+
+    // Strict length & format restrictions
+    if (['mobileNumber', 'alternateMobile', 'nomineeMobile', 'witnessMobile', 'corrMobile'].includes(name)) {
+      // Only digits, maximum 10 digits
+      finalVal = String(value || '').replace(/\D/g, '').slice(0, 10);
+    } else if (['permPinCode', 'corrPinCode', 'witnessPinCode'].includes(name)) {
+      // Only digits, maximum 6 digits
+      finalVal = String(value || '').replace(/\D/g, '').slice(0, 6);
+    } else if (name === 'panNo') {
+      // Alphanumeric uppercase, maximum 10 characters
+      finalVal = String(value || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10);
+    } else if (name === 'empId' || name === 'membershipId') {
+      finalVal = String(value || '').toUpperCase();
+    } else if (name === 'age') {
+      finalVal = String(value || '').replace(/\D/g, '').slice(0, 3);
+      const numAge = Number(finalVal);
+      if (finalVal && !isNaN(numAge) && numAge < 18) {
+        setValidationErrors((prev) => ({
+          ...prev,
+          age: `Applicant must be at least 18 years of age (currently ${numAge}).`
+        }));
+      } else {
+        setValidationErrors((prev) => ({ ...prev, age: null }));
+      }
+    } else if (name === 'nomineeAge' || name === 'shareCount') {
+      finalVal = String(value || '').replace(/\D/g, '').slice(0, 3);
+    }
+
     setFormData((prev) => ({
       ...prev,
       [name]: finalVal
@@ -553,48 +592,78 @@ const RegisterPage = ({ onNavigate }) => {
     const missing = [];
 
     // Step 1: Personal Details
-    if (!formData.firstName.trim()) {
+    if (!formData.firstName?.trim()) {
       errors.firstName = 'First name is required.';
       missing.push({ step: 1, stepName: 'Personal', field: 'First Name', message: 'First name is required.' });
     }
-    if (!formData.lastName.trim()) {
+    if (!formData.lastName?.trim()) {
       errors.lastName = 'Last name is required.';
       missing.push({ step: 1, stepName: 'Personal', field: 'Last Name', message: 'Last name is required.' });
     }
-    if (!formData.fatherOrHusbandName.trim()) {
+    if (!formData.fatherOrHusbandName?.trim()) {
       errors.fatherOrHusbandName = 'Father / Husband / Mother name is required.';
       missing.push({ step: 1, stepName: 'Personal', field: 'Father/Husband Name', message: 'Father/Husband name is required.' });
     }
     if (!formData.dob) {
       errors.dob = 'Date of birth is required.';
       missing.push({ step: 1, stepName: 'Personal', field: 'Date of Birth', message: 'Date of birth is required.' });
-    } else if (Number(formData.age) < 18) {
-      errors.age = 'Applicant must be at least 18 years of age per statutory rules.';
-      missing.push({ step: 1, stepName: 'Personal', field: 'Age (18+)', message: 'Applicant must be at least 18 years old.' });
+    }
+    const numAge = Number(formData.age);
+    if (!formData.age || isNaN(numAge)) {
+      errors.age = 'Age is required (minimum 18 years).';
+      missing.push({ step: 1, stepName: 'Personal', field: 'Age (18+)', message: 'Age is required (minimum 18 years).' });
+    } else if (numAge < 18) {
+      errors.age = `Applicant must be at least 18 years of age per statutory rules (currently ${numAge} yrs).`;
+      missing.push({ step: 1, stepName: 'Personal', field: 'Age (18+)', message: `Applicant must be at least 18 years old (currently ${numAge} yrs).` });
     }
 
     // Step 2: Contact & Address
     const cleanMobile = (formData.mobileNumber || '').replace(/\D/g, '');
-    if (!cleanMobile || cleanMobile.length < 10) {
-      errors.mobileNumber = 'Valid 10-digit Indian mobile number is required.';
-      missing.push({ step: 2, stepName: 'Address & Contact', field: 'Mobile Number', message: 'Valid 10-digit mobile number is required.' });
+    if (!cleanMobile) {
+      errors.mobileNumber = 'Mobile number is required.';
+      missing.push({ step: 2, stepName: 'Address & Contact', field: 'Mobile Number', message: 'Mobile number is required.' });
+    } else if (cleanMobile.length !== 10) {
+      errors.mobileNumber = `Mobile number must be exactly 10 digits (currently ${cleanMobile.length}).`;
+      missing.push({ step: 2, stepName: 'Address & Contact', field: 'Mobile Number', message: `Must be exactly 10 digits (currently ${cleanMobile.length}).` });
+    } else if (!/^[6-9]\d{9}$/.test(cleanMobile)) {
+      errors.mobileNumber = 'Mobile number must start with 6, 7, 8, or 9.';
+      missing.push({ step: 2, stepName: 'Address & Contact', field: 'Mobile Number', message: 'Must start with 6, 7, 8, or 9.' });
     }
-    if (!formData.email.trim() || !formData.email.includes('@')) {
+
+    if (formData.alternateMobile) {
+      const cleanAlt = formData.alternateMobile.replace(/\D/g, '');
+      if (cleanAlt.length !== 10) {
+        errors.alternateMobile = `Alternate mobile must be exactly 10 digits (currently ${cleanAlt.length}).`;
+        missing.push({ step: 2, stepName: 'Address & Contact', field: 'Alternate Mobile', message: 'Must be exactly 10 digits.' });
+      }
+    }
+
+    if (!formData.email?.trim() || !formData.email.includes('@')) {
       errors.email = 'Valid email address is required.';
       missing.push({ step: 2, stepName: 'Address & Contact', field: 'Email Address', message: 'Valid email address is required.' });
     }
+
     const cleanPan = (formData.panNo || '').trim().toUpperCase();
-    if (!cleanPan || cleanPan.length !== 10) {
-      errors.panNo = 'Valid 10-character PAN number is required (e.g. ABCDE1234F).';
-      missing.push({ step: 2, stepName: 'Address & Contact', field: 'PAN Number', message: 'Valid 10-character PAN card number is required.' });
+    if (!cleanPan) {
+      errors.panNo = 'PAN number is required.';
+      missing.push({ step: 2, stepName: 'Address & Contact', field: 'PAN Number', message: 'PAN number is required.' });
+    } else if (cleanPan.length !== 10) {
+      errors.panNo = `PAN number must be exactly 10 characters (currently ${cleanPan.length}).`;
+      missing.push({ step: 2, stepName: 'Address & Contact', field: 'PAN Number', message: `Must be exactly 10 characters (currently ${cleanPan.length}).` });
+    } else if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(cleanPan)) {
+      errors.panNo = 'Invalid PAN format. Must be 5 letters, 4 digits, 1 letter (e.g. ABCDE1234F).';
+      missing.push({ step: 2, stepName: 'Address & Contact', field: 'PAN Number', message: 'Format: 5 letters, 4 digits, 1 letter.' });
     }
-    if (!formData.permAddress.trim()) {
+
+    if (!formData.permAddress?.trim()) {
       errors.permAddress = 'Permanent address is required.';
       missing.push({ step: 2, stepName: 'Address & Contact', field: 'Permanent Address', message: 'Permanent address is required.' });
     }
-    if (!formData.permPinCode.trim() || formData.permPinCode.replace(/\D/g, '').length !== 6) {
-      errors.permPinCode = 'Valid 6-digit PIN code is required.';
-      missing.push({ step: 2, stepName: 'Address & Contact', field: 'PIN Code', message: 'Valid 6-digit PIN code is required.' });
+
+    const cleanPin = (formData.permPinCode || '').replace(/\D/g, '');
+    if (!cleanPin || cleanPin.length !== 6) {
+      errors.permPinCode = `PIN code must be exactly 6 digits (currently ${cleanPin.length}).`;
+      missing.push({ step: 2, stepName: 'Address & Contact', field: 'PIN Code', message: `Must be exactly 6 digits (currently ${cleanPin.length}).` });
     }
 
     // Step 3: Company & Portal Credentials
@@ -626,24 +695,33 @@ const RegisterPage = ({ onNavigate }) => {
       }
     }
 
-
+    if (!formData.password?.trim() || formData.password.length < 6) {
+      errors.password = 'Portal login password must be at least 6 characters.';
+      missing.push({ step: 3, stepName: 'Account', field: 'Portal Password', message: 'Password must be at least 6 characters.' });
+    }
 
     // Step 4: Nominee Details
-    if (!formData.nomineeFirstName.trim()) {
+    if (!formData.nomineeFirstName?.trim()) {
       errors.nomineeFirstName = 'Nominee legal name is required.';
       missing.push({ step: 4, stepName: 'Nominee', field: 'Nominee Name', message: 'Nominee name is required.' });
     }
-    if (!formData.nomineeRelationship) {
+    if (!formData.nomineeRelationship?.trim()) {
       errors.nomineeRelationship = 'Nominee relationship is required.';
       missing.push({ step: 4, stepName: 'Nominee', field: 'Nominee Relationship', message: 'Nominee relationship is required.' });
     }
 
+    // Step 5: Share Count
+    if (!formData.shareCount || Number(formData.shareCount) < 1) {
+      errors.shareCount = 'Minimum 1 statutory share (₹10) is required.';
+      missing.push({ step: 5, stepName: 'Shares', field: 'Share Count', message: 'Minimum 1 share is required.' });
+    }
+
     // Step 7: Witness Details
-    if (!formData.witnessName.trim()) {
+    if (!formData.witnessName?.trim()) {
       errors.witnessName = 'Witness name is required.';
       missing.push({ step: 7, stepName: 'Witness', field: 'Witness Name', message: 'Witness name is required.' });
     }
-    if (formData.witnessIsMember && !formData.witnessMembershipNo.trim()) {
+    if (formData.witnessIsMember && !formData.witnessMembershipNo?.trim()) {
       errors.witnessMembershipNo = 'Membership Number is required if witness is a Newutkal member.';
       missing.push({ step: 7, stepName: 'Witness', field: 'Witness Member No', message: 'Witness membership number is required.' });
     }
@@ -655,10 +733,13 @@ const RegisterPage = ({ onNavigate }) => {
     }
 
     // Step 9: ₹200 Payment verification
-    if (paymentMethod === 'UPI' && !paymentUtr.trim()) {
+    if (paymentMethod === 'UPI' && !paymentUtr?.trim()) {
       errors.payment = 'UPI Transaction UTR / Ref ID is required for the ₹200 membership fee.';
       missing.push({ step: 9, stepName: 'Payment (₹200)', field: 'UPI Reference / UTR', message: 'Enter UPI transaction UTR or click Test UTR.' });
-    } else if (paymentMethod === 'CASH' && !branchCashReceipt.trim()) {
+    } else if (paymentMethod === 'RAZORPAY' && !razorpayPaymentId) {
+      errors.payment = 'Razorpay payment authorization required for ₹200 fee.';
+      missing.push({ step: 9, stepName: 'Payment (₹200)', field: 'Razorpay Payment', message: 'Complete Razorpay payment authorization.' });
+    } else if (paymentMethod === 'CASH' && !branchCashReceipt?.trim()) {
       errors.payment = 'Branch Cashier receipt or challan reference number is required.';
       missing.push({ step: 9, stepName: 'Payment (₹200)', field: 'Cash Receipt Ref', message: 'Enter Branch Cash Receipt or click Test Receipt.' });
     } else if (paymentMethod === 'CARD' && (!cardData.number || cardData.number.replace(/\s/g, '').length < 16)) {
@@ -673,13 +754,174 @@ const RegisterPage = ({ onNavigate }) => {
     };
   };
 
-  // Optional step check
+  // Step-by-step validator to prevent moving forward without filling current slide's necessary details
   const validateStep = (step) => {
+    const errors = {};
+    let isValid = true;
+    let errorMsgText = '';
+
+    if (step === 1) {
+      if (!formData.firstName?.trim()) {
+        errors.firstName = 'First name is required.';
+        isValid = false;
+      }
+      if (!formData.lastName?.trim()) {
+        errors.lastName = 'Last name is required.';
+        isValid = false;
+      }
+      if (!formData.fatherOrHusbandName?.trim()) {
+        errors.fatherOrHusbandName = 'Father / Husband / Mother name is required.';
+        isValid = false;
+      }
+      if (!formData.dob) {
+        errors.dob = 'Date of birth is required.';
+        isValid = false;
+      }
+      const numAge = Number(formData.age);
+      if (!formData.age || isNaN(numAge)) {
+        errors.age = 'Applicant age is required (minimum 18 years).';
+        isValid = false;
+      } else if (numAge < 18) {
+        errors.age = `Applicant must be at least 18 years of age (currently ${numAge} yrs). Statutory membership requires age 18+.`;
+        isValid = false;
+      }
+      if (!isValid) {
+        errorMsgText = errors.age && numAge < 18
+          ? `Applicant must be at least 18 years of age (currently ${numAge} yrs).`
+          : 'Please fill in all mandatory Personal Details (Name, Guardian, DOB, Age 18+).';
+      }
+    }
+
+    if (step === 2) {
+      const cleanMobile = (formData.mobileNumber || '').replace(/\D/g, '');
+      if (!cleanMobile) {
+        errors.mobileNumber = 'Mobile number is required.';
+        isValid = false;
+        errorMsgText = 'Primary Mobile number is required.';
+      } else if (cleanMobile.length !== 10) {
+        errors.mobileNumber = `Mobile number must be exactly 10 digits (currently ${cleanMobile.length}).`;
+        isValid = false;
+        errorMsgText = `Mobile number must be exactly 10 digits (currently ${cleanMobile.length}).`;
+      } else if (!/^[6-9]\d{9}$/.test(cleanMobile)) {
+        errors.mobileNumber = 'Mobile number must start with 6, 7, 8, or 9.';
+        isValid = false;
+        errorMsgText = 'Mobile number must be a valid 10-digit Indian number starting with 6-9.';
+      }
+
+      if (formData.alternateMobile) {
+        const cleanAlt = formData.alternateMobile.replace(/\D/g, '');
+        if (cleanAlt.length !== 10) {
+          errors.alternateMobile = `Alternate mobile must be exactly 10 digits (currently ${cleanAlt.length}).`;
+          isValid = false;
+          if (!errorMsgText) errorMsgText = 'Alternate mobile number must be exactly 10 digits.';
+        }
+      }
+
+      if (!formData.email?.trim() || !formData.email.includes('@')) {
+        errors.email = 'Valid email address is required.';
+        isValid = false;
+        if (!errorMsgText) errorMsgText = 'Please provide a valid email address.';
+      }
+
+      const cleanPan = (formData.panNo || '').trim().toUpperCase();
+      if (!cleanPan) {
+        errors.panNo = 'PAN number is required.';
+        isValid = false;
+        if (!errorMsgText) errorMsgText = 'PAN card number is required.';
+      } else if (cleanPan.length !== 10) {
+        errors.panNo = `PAN number must be exactly 10 characters (currently ${cleanPan.length}).`;
+        isValid = false;
+        if (!errorMsgText) errorMsgText = `PAN number must be exactly 10 characters (currently ${cleanPan.length}).`;
+      } else if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(cleanPan)) {
+        errors.panNo = 'Invalid PAN format. Must be 5 letters, 4 digits, 1 letter (e.g. ABCDE1234F).';
+        isValid = false;
+        if (!errorMsgText) errorMsgText = 'Invalid PAN format (e.g. ABCDE1234F).';
+      }
+
+      if (!formData.permAddress?.trim()) {
+        errors.permAddress = 'Permanent address is required.';
+        isValid = false;
+        if (!errorMsgText) errorMsgText = 'Permanent residential address is required.';
+      }
+
+      const cleanPin = (formData.permPinCode || '').replace(/\D/g, '');
+      if (!cleanPin || cleanPin.length !== 6) {
+        errors.permPinCode = `PIN code must be exactly 6 digits (currently ${cleanPin.length}).`;
+        isValid = false;
+        if (!errorMsgText) errorMsgText = `PIN code must be exactly 6 digits (currently ${cleanPin.length}).`;
+      }
+    }
+
+    if (step === 3) {
+      if (!formData.empId?.trim()) {
+        errors.empId = 'EMP ID is required.';
+        isValid = false;
+      }
+      if (!formData.membershipId?.trim()) {
+        errors.membershipId = 'Membership ID is required.';
+        isValid = false;
+      }
+      if (!formData.password?.trim() || formData.password.length < 6) {
+        errors.password = 'Portal login password must be at least 6 characters.';
+        isValid = false;
+      }
+      if (!isValid) errorMsgText = 'Please provide unique EMP ID, Membership ID and Password.';
+    }
+
+    if (step === 4) {
+      if (!formData.nomineeFirstName?.trim()) {
+        errors.nomineeFirstName = 'Nominee legal name is required.';
+        isValid = false;
+      }
+      if (!formData.nomineeRelationship?.trim()) {
+        errors.nomineeRelationship = 'Nominee relationship is required.';
+        isValid = false;
+      }
+      if (!isValid) errorMsgText = 'Please provide Nominee legal name and relationship.';
+    }
+
+    if (step === 5) {
+      if (!formData.shareCount || Number(formData.shareCount) < 1) {
+        errors.shareCount = 'Minimum 1 statutory share (₹10) is required.';
+        isValid = false;
+        errorMsgText = 'Minimum 1 share subscription is required.';
+      }
+    }
+
+    if (step === 7) {
+      if (!formData.witnessName?.trim()) {
+        errors.witnessName = 'Witness legal name is required.';
+        isValid = false;
+      }
+      if (formData.witnessIsMember && !formData.witnessMembershipNo?.trim()) {
+        errors.witnessMembershipNo = 'Membership Number is required if witness is a member.';
+        isValid = false;
+      }
+      if (!isValid) errorMsgText = 'Please fill in Witness Details before proceeding.';
+    }
+
+    if (step === 8) {
+      if (!formData.agreedTerms) {
+        errors.agreedTerms = 'You must accept the statutory declaration and rules.';
+        isValid = false;
+        errorMsgText = 'You must check the statutory declaration checkbox to continue.';
+      }
+    }
+
+    if (!isValid) {
+      setValidationErrors((prev) => ({ ...prev, ...errors }));
+      addToast(errorMsgText || 'Please fill in all necessary details on this step to continue.', 'warning');
+      return false;
+    }
+
     return true;
   };
 
-  // Move to Next Slide freely
+  // Move to Next Slide - strictly validates current slide first
   const handleNextStep = () => {
+    if (!validateStep(currentStep)) {
+      return;
+    }
     setCurrentStep((prev) => Math.min(prev + 1, 9));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -690,82 +932,52 @@ const RegisterPage = ({ onNavigate }) => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Final Form Submission Handler - Enforces validation with intelligent fallbacks so submission NEVER fails
+  // Final Form Submission Handler - STRICTLY BLOCKS submission without necessary details
   const handleFinalSubmit = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
 
-    // 1. Sensible statutory fallbacks so missing optional fields NEVER block submission
-    const effFirstName = formData.firstName?.trim() || 'Applicant';
-    const effLastName = formData.lastName?.trim() || 'Member';
-    const effFather = formData.fatherOrHusbandName?.trim() || `Guardian of ${effFirstName}`;
-    const effDob = formData.dob || '1995-05-15';
-    const effAge = formData.age || '31';
-    let effMobile = formData.mobileNumber?.trim();
-    if (!effMobile || effMobile.replace(/\D/g, '').length < 10) {
-      effMobile = `9861${Math.floor(100000 + Math.random() * 900000)}`;
-      addToast(`Assigned valid mobile ${effMobile} for statutory submission.`, 'info');
+    // STRICT VALIDATION: Form CANNOT be submitted without all necessary details!
+    const validation = validateAllImportantDetails();
+    if (!validation.isValid) {
+      setValidationErrors(validation.errors);
+      setMissingDetailsList(validation.missing);
+      const firstMissing = validation.missing[0];
+      const errorText = `Cannot submit form: ${validation.missing.length} necessary details missing! First incomplete field: ${firstMissing.field} on Step ${firstMissing.step} (${firstMissing.message})`;
+      setErrorMsg(errorText);
+      addToast(`Form CANNOT be submitted without necessary details! (${validation.missing.length} fields missing).`, 'error');
+      setCurrentStep(firstMissing.step);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
     }
-    let effEmail = formData.email?.trim();
-    if (!effEmail || !effEmail.includes('@')) {
-      effEmail = `member.${Date.now().toString().slice(-6)}@utkalfinance.com`;
-    }
-    let effPan = (formData.panNo || '').trim().toUpperCase();
-    if (!effPan || effPan.length !== 10) {
-      effPan = 'ABCDE1234F';
-    }
-    const effAddress = formData.permAddress?.trim() || 'Plot 142, VIP Area, Saheed Nagar';
-    const effPin = (formData.permPinCode || '').trim() || '751007';
-
-    // Unique EMP and Membership ID
-    let effEmp = (formData.empId || '').trim().toUpperCase();
-    let effMem = (formData.membershipId || '').trim().toUpperCase();
-    if (!effEmp || (members || []).some(m => (m.empId || m.emp_id || '').toUpperCase() === effEmp)) {
-      effEmp = generateUniqueEmpId(members);
-    }
-    if (!effMem || (members || []).some(m => (m.id || m.membershipId || m.membership_id || '').toUpperCase() === effMem)) {
-      effMem = generateUniqueMembershipId(members);
-    }
-
-    const effNomineeFirst = formData.nomineeFirstName?.trim() || 'Family Nominee';
-    const effWitnessName = formData.witnessName?.trim() || 'Pradeep Kumar Sahoo';
-
-    let effPaymentRef = paymentUtr?.trim();
-    if (paymentMethod === 'UPI' && !effPaymentRef) {
-      effPaymentRef = `UTR${Math.floor(100000000000 + Math.random() * 900000000000)}`;
-      setPaymentUtr(effPaymentRef);
-    } else if (paymentMethod === 'CASH' && !branchCashReceipt?.trim()) {
-      effPaymentRef = `RCP-2026-${Math.floor(10000 + Math.random() * 90000)}`;
-      setBranchCashReceipt(effPaymentRef);
-    } else if (paymentMethod === 'CARD' && (!cardData.number || cardData.number.replace(/\s/g, '').length < 16)) {
-      effPaymentRef = `CARD-AUTH-${Date.now().toString().slice(-6)}`;
-    } else if (!effPaymentRef) {
-      effPaymentRef = `TXN-${Date.now().toString().slice(-8)}`;
-    }
-
-    // Update state with effective fields
-    setFormData(prev => ({
-      ...prev,
-      firstName: effFirstName,
-      lastName: effLastName,
-      fatherOrHusbandName: effFather,
-      dob: effDob,
-      age: effAge,
-      mobileNumber: effMobile,
-      email: effEmail,
-      panNo: effPan,
-      permAddress: effAddress,
-      permPinCode: effPin,
-      empId: effEmp,
-      membershipId: effMem,
-      nomineeFirstName: effNomineeFirst,
-      witnessName: effWitnessName,
-      agreedTerms: true
-    }));
 
     setValidationErrors({});
     setMissingDetailsList([]);
     setIsSubmitting(true);
     setErrorMsg('');
+
+    const effFirstName = formData.firstName.trim();
+    const effLastName = formData.lastName.trim();
+    const effFather = formData.fatherOrHusbandName.trim();
+    const effDob = formData.dob;
+    const effAge = formData.age;
+    const effMobile = formData.mobileNumber.trim();
+    const effEmail = formData.email.trim();
+    const effPan = formData.panNo.trim().toUpperCase();
+    const effAddress = formData.permAddress.trim();
+    const effPin = formData.permPinCode.trim();
+    const effEmp = formData.empId.trim().toUpperCase();
+    const effMem = formData.membershipId.trim().toUpperCase();
+    const effNomineeFirst = formData.nomineeFirstName.trim();
+    const effWitnessName = formData.witnessName.trim();
+
+    let effPaymentRef = paymentUtr?.trim();
+    if (paymentMethod === 'RAZORPAY') {
+      effPaymentRef = razorpayPaymentId;
+    } else if (paymentMethod === 'CASH') {
+      effPaymentRef = branchCashReceipt.trim();
+    } else if (paymentMethod === 'CARD') {
+      effPaymentRef = `CARD-${cardData.number.replace(/\s/g, '').slice(-4)}`;
+    }
 
     const fullName = `${formData.title || 'Mr.'} ${effFirstName} ${formData.middleName ? formData.middleName + ' ' : ''}${effLastName}`.trim();
 
@@ -2305,32 +2517,60 @@ const RegisterPage = ({ onNavigate }) => {
                   {/* DOB, Age, Gender, Marital Status */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 text-xs">
                     <div>
-                      <label className="block font-bold text-slate-700 mb-1">Date of Birth *</label>
+                      <label className="block font-bold text-slate-700 mb-1">
+                        Date of Birth * <span className="text-[10px] text-[#003E9E] font-semibold">(Min 18 Yrs)</span>
+                      </label>
                       <input
                         type="date"
                         name="dob"
+                        max={new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().split('T')[0]}
                         value={formData.dob}
                         onChange={handleInputChange}
                         className={`w-full px-2.5 sm:px-3.5 py-2.5 rounded-xl border text-xs focus:ring-2 focus:ring-[#003E9E] focus:border-[#003E9E] ${
                           validationErrors.dob ? 'border-rose-400 bg-rose-50' : 'border-slate-200'
                         }`}
                       />
+                      {validationErrors.dob && (
+                        <span className="text-[10px] text-rose-600 font-semibold block mt-1">
+                          {validationErrors.dob}
+                        </span>
+                      )}
                     </div>
 
                     <div>
-                      <label className="block font-bold text-slate-700 mb-1">Age (Years) *</label>
-                      <input
-                        type="number"
-                        name="age"
-                        value={formData.age}
-                        onChange={handleInputChange}
-                        placeholder="Age >= 18"
-                        min="18"
-                        max="100"
-                        className={`w-full px-3.5 py-2.5 rounded-xl border text-xs focus:ring-2 focus:ring-[#003E9E] focus:border-[#003E9E] ${
-                          validationErrors.age ? 'border-rose-400 bg-rose-50' : 'border-slate-200'
-                        }`}
-                      />
+                      <label className="block font-bold text-slate-700 mb-1">
+                        Age (Years) * <span className="text-[10px] text-emerald-600 font-semibold">(18+)</span>
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          name="age"
+                          value={formData.age}
+                          onChange={handleInputChange}
+                          placeholder="Min 18"
+                          min="18"
+                          max="120"
+                          className={`w-full px-3.5 pr-14 py-2.5 rounded-xl border text-xs font-mono font-bold focus:ring-2 focus:ring-[#003E9E] focus:border-[#003E9E] ${
+                            validationErrors.age || (formData.age && Number(formData.age) < 18)
+                              ? 'border-rose-400 bg-rose-50 text-rose-900'
+                              : formData.age && Number(formData.age) >= 18
+                              ? 'border-emerald-300 bg-emerald-50/40 text-emerald-950'
+                              : 'border-slate-200'
+                          }`}
+                        />
+                        {formData.age && (
+                          <span className={`absolute right-2.5 top-2.5 text-[10px] font-mono font-bold ${
+                            Number(formData.age) >= 18 ? 'text-emerald-600' : 'text-rose-600'
+                          }`}>
+                            {Number(formData.age) >= 18 ? '✓ 18+' : '< 18'}
+                          </span>
+                        )}
+                      </div>
+                      {validationErrors.age && (
+                        <span className="text-[10px] text-rose-600 font-semibold block mt-1">
+                          {validationErrors.age}
+                        </span>
+                      )}
                     </div>
 
                     <div>
@@ -2456,15 +2696,25 @@ const RegisterPage = ({ onNavigate }) => {
                         <input
                           type="tel"
                           name="mobileNumber"
+                          maxLength={10}
+                          inputMode="numeric"
                           value={formData.mobileNumber}
                           onChange={handleInputChange}
-                          placeholder="e.g. 9861054321"
-                          className={`w-full pl-8 pr-3.5 py-2.5 rounded-xl border text-xs focus:ring-2 focus:ring-[#003E9E] focus:border-[#003E9E] ${
-                            validationErrors.mobileNumber ? 'border-rose-400 bg-rose-50' : 'border-slate-200'
+                          placeholder="10-digit mobile (e.g. 9861054321)"
+                          className={`w-full pl-8 pr-12 py-2.5 rounded-xl border text-xs font-mono font-bold focus:ring-2 focus:ring-[#003E9E] focus:border-[#003E9E] ${
+                            validationErrors.mobileNumber ? 'border-rose-400 bg-rose-50 text-rose-900' : 'border-slate-200'
                           }`}
                         />
                         <Phone className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-3" />
+                        <span className={`absolute right-2.5 top-2.5 text-[10px] font-mono font-bold ${formData.mobileNumber.length === 10 ? 'text-emerald-600' : 'text-slate-400'}`}>
+                          {formData.mobileNumber.length}/10
+                        </span>
                       </div>
+                      {validationErrors.mobileNumber && (
+                        <span className="text-[10px] text-rose-600 font-semibold block mt-1">
+                          {validationErrors.mobileNumber}
+                        </span>
+                      )}
                     </div>
 
                     <div>
@@ -2484,33 +2734,57 @@ const RegisterPage = ({ onNavigate }) => {
                         />
                         <Mail className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-3" />
                       </div>
+                      {validationErrors.email && (
+                        <span className="text-[10px] text-rose-600 font-semibold block mt-1">
+                          {validationErrors.email}
+                        </span>
+                      )}
                     </div>
 
                     <div>
                       <label className="block font-bold text-slate-700 mb-1">Alternate Mobile No.</label>
-                      <input
-                        type="tel"
-                        name="alternateMobile"
-                        value={formData.alternateMobile}
-                        onChange={handleInputChange}
-                        placeholder="Optional secondary phone"
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-[#003E9E] focus:border-[#003E9E]"
-                      />
+                      <div className="relative">
+                        <input
+                          type="tel"
+                          name="alternateMobile"
+                          maxLength={10}
+                          inputMode="numeric"
+                          value={formData.alternateMobile}
+                          onChange={handleInputChange}
+                          placeholder="Optional 10-digit secondary"
+                          className="w-full px-3.5 pr-12 py-2.5 rounded-xl border border-slate-200 text-xs font-mono focus:ring-2 focus:ring-[#003E9E] focus:border-[#003E9E]"
+                        />
+                        {formData.alternateMobile.length > 0 && (
+                          <span className={`absolute right-2.5 top-2.5 text-[10px] font-mono font-bold ${formData.alternateMobile.length === 10 ? 'text-emerald-600' : 'text-slate-400'}`}>
+                            {formData.alternateMobile.length}/10
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     <div>
                       <label className="block font-bold text-slate-700 mb-1">PAN Number *</label>
-                      <input
-                        type="text"
-                        name="panNo"
-                        maxLength="10"
-                        value={formData.panNo.toUpperCase()}
-                        onChange={handleInputChange}
-                        placeholder="ABCDE1234F"
-                        className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-mono font-bold uppercase focus:ring-2 focus:ring-[#003E9E] focus:border-[#003E9E] ${
-                          validationErrors.panNo ? 'border-rose-400 bg-rose-50' : 'border-slate-200'
-                        }`}
-                      />
+                      <div className="relative">
+                        <input
+                          type="text"
+                          name="panNo"
+                          maxLength={10}
+                          value={formData.panNo.toUpperCase()}
+                          onChange={handleInputChange}
+                          placeholder="ABCDE1234F"
+                          className={`w-full px-3.5 pr-12 py-2.5 rounded-xl border text-xs font-mono font-bold uppercase focus:ring-2 focus:ring-[#003E9E] focus:border-[#003E9E] ${
+                            validationErrors.panNo ? 'border-rose-400 bg-rose-50 text-rose-900' : 'border-slate-200'
+                          }`}
+                        />
+                        <span className={`absolute right-2.5 top-2.5 text-[10px] font-mono font-bold ${formData.panNo.length === 10 ? 'text-emerald-600' : 'text-slate-400'}`}>
+                          {formData.panNo.length}/10
+                        </span>
+                      </div>
+                      {validationErrors.panNo && (
+                        <span className="text-[10px] text-rose-600 font-semibold block mt-1">
+                          {validationErrors.panNo}
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -2558,16 +2832,28 @@ const RegisterPage = ({ onNavigate }) => {
 
                       <div>
                         <label className="block font-bold text-slate-700 mb-1">PIN Code *</label>
-                        <input
-                          type="text"
-                          name="permPinCode"
-                          maxLength="6"
-                          value={formData.permPinCode}
-                          onChange={handleInputChange}
-                          className={`w-full px-3 py-2 rounded-xl border text-xs font-mono font-bold ${
-                            validationErrors.permPinCode ? 'border-rose-400 bg-rose-50' : 'border-slate-200 bg-white'
-                          }`}
-                        />
+                        <div className="relative">
+                          <input
+                            type="text"
+                            name="permPinCode"
+                            maxLength={6}
+                            inputMode="numeric"
+                            value={formData.permPinCode}
+                            onChange={handleInputChange}
+                            placeholder="751001"
+                            className={`w-full px-3 pr-10 py-2 rounded-xl border text-xs font-mono font-bold ${
+                              validationErrors.permPinCode ? 'border-rose-400 bg-rose-50 text-rose-900' : 'border-slate-200 bg-white'
+                            }`}
+                          />
+                          <span className={`absolute right-2 top-2 text-[10px] font-mono font-bold ${formData.permPinCode.length === 6 ? 'text-emerald-600' : 'text-slate-400'}`}>
+                            {formData.permPinCode.length}/6
+                          </span>
+                        </div>
+                        {validationErrors.permPinCode && (
+                          <span className="text-[10px] text-rose-600 font-semibold block mt-1">
+                            {validationErrors.permPinCode}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -2884,14 +3170,23 @@ const RegisterPage = ({ onNavigate }) => {
 
                     <div className="col-span-2 sm:col-span-1">
                       <label className="block font-bold text-slate-700 mb-1">Nominee Mobile Number</label>
-                      <input
-                        type="tel"
-                        name="nomineeMobile"
-                        value={formData.nomineeMobile}
-                        onChange={handleInputChange}
-                        placeholder="10-digit mobile"
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs"
-                      />
+                      <div className="relative">
+                        <input
+                          type="tel"
+                          name="nomineeMobile"
+                          maxLength={10}
+                          inputMode="numeric"
+                          value={formData.nomineeMobile}
+                          onChange={handleInputChange}
+                          placeholder="10-digit mobile"
+                          className="w-full px-3.5 pr-12 py-2.5 rounded-xl border border-slate-200 text-xs font-mono"
+                        />
+                        {formData.nomineeMobile.length > 0 && (
+                          <span className={`absolute right-2.5 top-2.5 text-[10px] font-mono font-bold ${formData.nomineeMobile.length === 10 ? 'text-emerald-600' : 'text-slate-400'}`}>
+                            {formData.nomineeMobile.length}/10
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -3240,14 +3535,23 @@ const RegisterPage = ({ onNavigate }) => {
 
                     <div>
                       <label className="block font-bold text-slate-700 mb-1">Witness Mobile Number</label>
-                      <input
-                        type="tel"
-                        name="witnessMobile"
-                        value={formData.witnessMobile}
-                        onChange={handleInputChange}
-                        placeholder="10-digit mobile number"
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs"
-                      />
+                      <div className="relative">
+                        <input
+                          type="tel"
+                          name="witnessMobile"
+                          maxLength={10}
+                          inputMode="numeric"
+                          value={formData.witnessMobile}
+                          onChange={handleInputChange}
+                          placeholder="10-digit mobile number"
+                          className="w-full px-3.5 pr-12 py-2.5 rounded-xl border border-slate-200 text-xs font-mono"
+                        />
+                        {formData.witnessMobile.length > 0 && (
+                          <span className={`absolute right-2.5 top-2.5 text-[10px] font-mono font-bold ${formData.witnessMobile.length === 10 ? 'text-emerald-600' : 'text-slate-400'}`}>
+                            {formData.witnessMobile.length}/10
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -3877,15 +4181,36 @@ const RegisterPage = ({ onNavigate }) => {
                       <div className="p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-rose-50 border-2 border-rose-300 text-rose-900 text-xs flex items-start gap-2.5 shadow-sm">
                         <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
                         <div className="flex-1 min-w-0">
-                          <strong className="block font-bold">Submission Notice:</strong>
+                          <strong className="block font-bold">Incomplete Application - Form Cannot Be Submitted:</strong>
                           <p className="mt-0.5 break-words">{errorMsg}</p>
-                          <div className="mt-2 flex items-center gap-2">
+                          {missingDetailsList.length > 0 && (
+                            <div className="mt-3 pt-2.5 border-t border-rose-200">
+                              <span className="font-bold text-rose-950 block mb-1.5">Missing Required Fields ({missingDetailsList.length}):</span>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                                {missingDetailsList.map((item, idx) => (
+                                  <button
+                                    key={idx}
+                                    type="button"
+                                    onClick={() => {
+                                      setCurrentStep(item.step);
+                                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                                    }}
+                                    className="p-2 rounded-lg bg-white border border-rose-200 hover:border-rose-400 text-left text-xs flex items-center justify-between text-rose-900 font-semibold cursor-pointer group"
+                                  >
+                                    <span>Step {item.step}: <span className="font-bold text-slate-900">{item.field}</span></span>
+                                    <span className="text-[10px] text-rose-600 font-bold group-hover:underline">Fill &rarr;</span>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          <div className="mt-3 flex items-center gap-2">
                             <button
                               type="button"
                               onClick={handleQuickFillDemo}
                               className="px-3 py-1.5 rounded-lg bg-rose-600 text-white text-[11px] font-bold hover:bg-rose-700 cursor-pointer"
                             >
-                              ⚡ Quick-Fill Unique Details &amp; Re-Submit
+                              ⚡ Quick-Fill Verified Demo Data
                             </button>
                           </div>
                         </div>

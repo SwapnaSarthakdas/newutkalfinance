@@ -84,9 +84,20 @@ const MembershipFormPage = ({ onNavigate }) => {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    let finalVal = type === 'checkbox' ? checked : value;
+
+    if (name === 'mobileNumber') {
+      // Strictly digits only, max 10 digits
+      finalVal = String(value || '').replace(/\D/g, '').slice(0, 10);
+    } else if (name === 'pinCode') {
+      finalVal = String(value || '').replace(/\D/g, '').slice(0, 6);
+    } else if (name === 'panNo') {
+      finalVal = String(value || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10);
+    }
+
     setFormData((prev) => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: finalVal
     }));
   };
   const handleInputChange = handleChange;
@@ -103,8 +114,54 @@ const MembershipFormPage = ({ onNavigate }) => {
       setErrorMsg('Please enter a valid Gmail / Email address for portal login.');
       return;
     }
-    if (!formData.mobileNumber.trim() || formData.mobileNumber.replace(/\D/g, '').length < 10) {
-      setErrorMsg('Please enter a valid 10-digit mobile number for portal login.');
+    const cleanMobile = (formData.mobileNumber || '').replace(/\D/g, '');
+    if (!cleanMobile) {
+      setErrorMsg('Mobile number is required.');
+      return;
+    }
+    if (cleanMobile.length !== 10) {
+      setErrorMsg(`Mobile number must be exactly 10 digits (currently ${cleanMobile.length}). Cannot be more or less than 10 digits.`);
+      return;
+    }
+    if (!/^[6-9]\d{9}$/.test(cleanMobile)) {
+      setErrorMsg('Mobile number must start with 6, 7, 8, or 9.');
+      return;
+    }
+    if (!formData.fatherOrHusbandName?.trim()) {
+      setErrorMsg('Father / Husband / Mother legal name is required.');
+      return;
+    }
+    if (!formData.dob) {
+      setErrorMsg('Date of birth is required.');
+      return;
+    }
+    const birthDate = new Date(formData.dob);
+    const today = new Date();
+    let computedAge = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+      computedAge--;
+    }
+    if (isNaN(computedAge) || computedAge < 18) {
+      setErrorMsg(`Applicant must be at least 18 years of age per statutory rules (current age: ${isNaN(computedAge) ? 'invalid' : computedAge} yrs).`);
+      return;
+    }
+    const cleanPan = (formData.panNo || '').trim().toUpperCase();
+    if (!cleanPan || cleanPan.length !== 10) {
+      setErrorMsg(`Valid 10-character PAN number is required (currently ${cleanPan.length}).`);
+      return;
+    }
+    if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(cleanPan)) {
+      setErrorMsg('Invalid PAN format. Must be 5 letters, 4 digits, 1 letter (e.g. ABCDE1234F).');
+      return;
+    }
+    if (!formData.address?.trim()) {
+      setErrorMsg('Permanent residential address is required.');
+      return;
+    }
+    const cleanPin = (formData.pinCode || '').replace(/\D/g, '');
+    if (!cleanPin || cleanPin.length !== 6) {
+      setErrorMsg(`Valid 6-digit PIN code is required (currently ${cleanPin.length}).`);
       return;
     }
     if (!formData.password || formData.password.length < 6) {
@@ -480,10 +537,14 @@ const MembershipFormPage = ({ onNavigate }) => {
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Date of Birth</label>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Date of Birth * <span className="text-[10px] text-[#003E9E] font-semibold">(Min 18 Years)</span>
+                </label>
                 <input
                   type="date"
+                  required
                   name="dob"
+                  max={new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().split('T')[0]}
                   value={formData.dob}
                   onChange={handleInputChange}
                   className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-[#003E9E] focus:border-[#003E9E]"
@@ -502,6 +563,25 @@ const MembershipFormPage = ({ onNavigate }) => {
                   <option value="Female">Female</option>
                   <option value="Transgender">Transgender</option>
                 </select>
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="block font-bold text-slate-700 mb-1">PAN Number *</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    required
+                    name="panNo"
+                    maxLength={10}
+                    value={formData.panNo}
+                    onChange={handleInputChange}
+                    placeholder="ABCDE1234F (10 characters)"
+                    className="w-full px-3 pr-12 py-2 rounded-xl border border-slate-200 text-xs font-mono font-bold uppercase focus:ring-2 focus:ring-[#003E9E] focus:border-[#003E9E]"
+                  />
+                  <span className={`absolute right-2.5 top-2 text-[10px] font-mono font-bold ${formData.panNo?.length === 10 ? 'text-emerald-600' : 'text-slate-400'}`}>
+                    {formData.panNo?.length || 0}/10
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -542,19 +622,24 @@ const MembershipFormPage = ({ onNavigate }) => {
 
               <div>
                 <label className="block font-bold text-slate-800 mb-1">
-                  Login Mobile Number *
+                  Login Mobile Number * (Max 10 Digits)
                 </label>
                 <div className="relative">
                   <input
                     type="tel"
                     required
                     name="mobileNumber"
+                    maxLength={10}
+                    inputMode="numeric"
                     value={formData.mobileNumber}
                     onChange={handleInputChange}
-                    placeholder="e.g. 9861054321 (10 digits)"
-                    className="w-full pl-8 pr-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-[#003E9E] focus:border-[#003E9E] bg-white"
+                    placeholder="10-digit mobile (e.g. 9861054321)"
+                    className="w-full pl-8 pr-12 py-2 rounded-xl border border-slate-200 text-xs font-mono font-bold focus:ring-2 focus:ring-[#003E9E] focus:border-[#003E9E] bg-white"
                   />
                   <Phone className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
+                  <span className={`absolute right-2.5 top-2 text-[10px] font-mono font-bold ${formData.mobileNumber?.length === 10 ? 'text-emerald-600' : 'text-slate-400'}`}>
+                    {formData.mobileNumber?.length || 0}/10
+                  </span>
                 </div>
               </div>
 
@@ -648,6 +733,26 @@ const MembershipFormPage = ({ onNavigate }) => {
                   onChange={handleInputChange}
                   className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-[#003E9E] focus:border-[#003E9E]"
                 />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Postal PIN Code *</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    required
+                    name="pinCode"
+                    maxLength={6}
+                    inputMode="numeric"
+                    value={formData.pinCode}
+                    onChange={handleInputChange}
+                    placeholder="751007 (6 digits)"
+                    className="w-full px-3 pr-10 py-2 rounded-xl border border-slate-200 text-xs font-mono font-bold focus:ring-2 focus:ring-[#003E9E] focus:border-[#003E9E]"
+                  />
+                  <span className={`absolute right-2.5 top-2 text-[10px] font-mono font-bold ${formData.pinCode?.length === 6 ? 'text-emerald-600' : 'text-slate-400'}`}>
+                    {formData.pinCode?.length || 0}/6
+                  </span>
+                </div>
               </div>
 
               <div>

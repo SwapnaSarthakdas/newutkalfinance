@@ -24,12 +24,22 @@ const AddMemberModal = ({ isOpen, onClose }) => {
       return;
     }
 
+    const cleanPhone = phone.replace(/\D/g, '');
+    if (cleanPhone.length !== 10) {
+      setError(`Mobile phone must be exactly 10 digits (currently ${cleanPhone.length}).`);
+      return;
+    }
+    if (!/^[6-9]\d{9}$/.test(cleanPhone)) {
+      setError('Mobile phone must start with 6, 7, 8, or 9.');
+      return;
+    }
+
     setIsSubmitting(true);
     setTimeout(() => {
       addMember({
         name: fullName,
         email,
-        phone,
+        phone: cleanPhone,
         city,
         occupation,
         initialDeposit
@@ -62,7 +72,7 @@ const AddMemberModal = ({ isOpen, onClose }) => {
             required
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
-            placeholder="e.g. Suman Mohanty"
+            placeholder="e.g. Suman Jena"
             className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-finance-600"
           />
         </div>
@@ -80,15 +90,22 @@ const AddMemberModal = ({ isOpen, onClose }) => {
             />
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">Mobile Phone *</label>
-            <input
-              type="tel"
-              required
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="+91 98610 00000"
-              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-finance-600"
-            />
+            <label className="block text-xs font-bold text-slate-700 mb-1">Mobile Phone * (10 Digits)</label>
+            <div className="relative">
+              <input
+                type="tel"
+                required
+                maxLength={10}
+                inputMode="numeric"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                placeholder="10-digit mobile (e.g. 9861054321)"
+                className="w-full px-3.5 pr-10 py-2.5 rounded-xl border border-slate-200 text-xs font-mono font-bold focus:ring-2 focus:ring-finance-600"
+              />
+              <span className={`absolute right-2.5 top-2.5 text-[10px] font-mono font-bold ${phone.length === 10 ? 'text-emerald-600' : 'text-slate-400'}`}>
+                {phone.length}/10
+              </span>
+            </div>
           </div>
         </div>
 
